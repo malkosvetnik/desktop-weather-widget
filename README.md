@@ -52,16 +52,34 @@ Hover over "Zagađenje" to see 7 pollutants:
 
 ---
 
+
 ## 📸 Screenshots
 
-![Widget Overview](screenshots/widget-overview.png)
+![Widget Overview](screenshots/widget_overview.png)
 *Full widget with weather data, 5-day forecast, and Serbian interface*
 
-![Air Quality Details](screenshots/air-quality-tooltip.png)
+![Air Quality Details](screenshots/air_quality_tooltip.png)
 *Detailed air quality information with 7 pollutants*
 
-![Tray Menu](screenshots/tray-menu.png)
+![Tray Menu](screenshots/tray_menu.png)
 *System tray menu with all options*
+```
+
+---
+
+### **KORAK 4: Save**
+
+**File → Save** (ili Ctrl+S)
+
+---
+
+### **KORAK 5: Commit u GitHub Desktop**
+
+1. Vrati se na **GitHub Desktop**
+2. Vidiš `README.md` promenjen
+3. **Summary:** 
+```
+   📝 Update README with screenshot links
 ---
 
 ## 🚀 Quick Start
