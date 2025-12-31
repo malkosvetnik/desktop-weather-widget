@@ -54,8 +54,14 @@ Hover over "Zagađenje" to see 7 pollutants:
 
 ## 📸 Screenshots
 
-> **Note**: Add your screenshots here
+![Widget Overview](screenshots/widget-overview.png)
+*Full widget with weather data, 5-day forecast, and Serbian interface*
 
+![Air Quality Details](screenshots/air-quality-tooltip.png)
+*Detailed air quality information with 7 pollutants*
+
+![Tray Menu](screenshots/tray-menu.png)
+*System tray menu with all options*
 ---
 
 ## 🚀 Quick Start
