@@ -1,172 +1,104 @@
-# 🚀 WEATHER WIDGET v2.1.0 - UPLOAD PACKAGE
+# 🚀 UPLOAD INSTRUKCIJE - v2.1.0 FINAL
 
-## 📦 Sadržaj paketa:
+## ✅ Sve je spremno!
 
-### Glavni fajlovi:
-- `weather_widget.pyw` - Glavni widget fajl (spreman za upload)
-- `README.md` - Dokumentacija projekta
-- `CHANGELOG.md` - Lista promena za v2.1.0
-- `RELEASE_NOTES.md` - Tekst za GitHub Release
-- `requirements.txt` - Python dependencies
-
-### Screenshot-ovi (`screenshots/` folder):
-- `main_widget.png` - Widget na srpskom jeziku
-- `main_widget_english.png` - Widget na engleskom jeziku ⭐ NOVA FIČURA
-- `alert_tooltip.png` - Tooltip sa upozorenjima
-- `pollution_tooltip.png` - Tooltip sa kvalitetom vazduha
-- `tray_menu.png` - System tray menu
-- `language_menu.png` - Language selection menu
+Ovaj paket sadrži:
+- ✅ Glavni fajl: `weather_widget.pyw`
+- ✅ Dokumentacija: README.md, CHANGELOG.md
+- ✅ Dependencies: requirements.txt
+- ✅ **8 screenshot-ova sa TAČNIM imenima**
+- ✅ **RELEASE_DESCRIPTION.md - Kopiraj direktno u GitHub Release!**
 
 ---
 
-## 🎯 UPLOAD PLAN - 3 KORAKA:
+## 📝 JEDNOSTAVAN UPLOAD PLAN - 2 KORAKA:
 
-### Korak 1: Upload glavnih fajlova (5 minuta)
+### **Korak 1: Update GitHub Release** (2 minuta)
 
-1. Idi na: https://github.com/malkosvetnik/desktop-weather-widget
-2. Klikni: **"Add file" → "Upload files"**
-3. Prevuci ove fajlove:
-   - `weather_widget.pyw`
-   - `README.md` (opciono - ako želiš da zaminieš stari)
-   - `CHANGELOG.md`
-   - `requirements.txt` (ako već nemaš)
+```
+1. Idi na: https://github.com/malkosvetnik/desktop-weather-widget/releases/tag/v2.1.0
+2. Klikni "Edit" (dugme gore desno)
+3. Obriši sve iz description polja
+4. Otvori RELEASE_DESCRIPTION.md
+5. Kopiraj SVE (Ctrl+A, Ctrl+C)
+6. Paste u Release description (Ctrl+V)
+7. Commit message: "Fix screenshot URLs and descriptions"
+8. Klikni "Update release"
+```
 
-4. **Commit message:**
-   ```
-   v2.1.0 - English language support + precipitation fixes
-   ```
-
-5. **Extended description:**
-   ```
-   - Added full English language translation
-   - Fixed real-time precipitation detection
-   - Fixed time rounding (1.9h → 2h)
-   - Fixed translation issues
-   - Improved error messages
-   ```
-
-6. Klikni **"Commit changes"**
+✅ **SVE SLIKE ĆE RADITI ODMAH!**
 
 ---
 
-### Korak 2: Upload screenshot-ova (3 minuta)
+### **Korak 2: Proveri screenshot-ove** (opciono)
 
-1. Idi u **`screenshots`** folder na GitHub-u (ili ga kreiraj ako ne postoji)
-2. Klikni: **"Upload files"**
-3. Prevuci SVE fajlove iz `screenshots/` foldera:
-   - main_widget.png
-   - main_widget_english.png
-   - alert_tooltip.png
-   - pollution_tooltip.png
-   - tray_menu.png
-   - language_menu.png
+Proveri da li su screenshot-ovi već na GitHub-u:
+```
+https://github.com/malkosvetnik/desktop-weather-widget/tree/main/screenshots
+```
 
-4. **Commit message:**
-   ```
-   Add v2.1.0 screenshots - English language support
-   ```
+Treba da vidiš ovih **8 fajlova:**
+- main_widget.png
+- main_widget_english.png
+- rain_now_closeup.png
+- hourly_forecast_tooltip.png
+- alert_tooltip.png
+- pollution_tooltip.png
+- tray_menu.png
+- language_menu.png
 
-5. Klikni **"Commit changes"**
-
----
-
-### Korak 3: Kreiraj GitHub Release (5 minuta)
-
-1. Idi na: https://github.com/malkosvetnik/desktop-weather-widget/releases
-2. Klikni: **"Draft a new release"**
-
-3. Popuni formu:
-
-   **Choose a tag:** `v2.1.0` (create new tag)
-   
-   **Release title:** 
-   ```
-   🌤️ Weather Widget v2.1.0 - English Language Support
-   ```
-
-   **Description:** (kopiraj iz RELEASE_NOTES.md ili koristi ovo):
-   ```markdown
-   # 🌤️ Weather Widget v2.1.0
-
-   ## 🌐 New Feature: Full English Language Support!
-
-   The widget now speaks both Serbian and English! Switch languages via tray menu.
-
-   ### What's New
-
-   ✅ **Full English translation** - All UI, menus, tooltips, messages  
-   ✅ **Real-time precipitation alerts** - Shows "Rain NOW!" when raining  
-   ✅ **Accurate time calculations** - 1h 56min → "Rain in 2h" (was "1h")  
-   ✅ **Proper translations** - All text translates correctly  
-   ✅ **Better API data** - Requests rain/precipitation values  
-
-   ### Screenshots
-
-   <table>
-   <tr>
-   <td><img src="screenshots/main_widget_english.png" width="250"></td>
-   <td><img src="screenshots/main_widget.png" width="250"></td>
-   </tr>
-   <tr>
-   <td align="center"><b>English</b></td>
-   <td align="center"><b>Serbian (Srpski)</b></td>
-   </tr>
-   </table>
-
-   ### Installation
-
-   ```bash
-   pip install PyQt5 requests
-   python weather_widget.pyw
-   ```
-
-   ### Full Changelog
-
-   See [CHANGELOG.md](CHANGELOG.md) for complete list of changes.
-
-   ---
-
-   **Weather data by [Open-Meteo](https://open-meteo.com)**
-   ```
-
-4. **Attach binaries** (opciono):
-   - Ako imaš .exe fajl, prevuci ga ovde
-
-5. Klikni **"Publish release"**
+Ako nemaš neke, upload-uj ih iz `screenshots/` foldera.
 
 ---
 
-## ✅ Finalna provera:
+## ✅ Screenshot URL-ovi (SVI TAČNI):
 
-Nakon upload-a, proveri:
-
-- [ ] Fajlovi vidljivi na GitHub-u
-- [ ] Screenshot-ovi se otvaraju i prikazuju
-- [ ] Release v2.1.0 kreiran
-- [ ] README prikazuje screenshot-ove (ako si ga ažurirao)
-- [ ] Tag v2.1.0 postoji
-
----
-
-## 🎉 Gotovo!
-
-Nakon upload-a:
-1. ✅ Projekat je ažuriran na v2.1.0
-2. ✅ Release je objavljen
-3. ✅ Screenshot-ovi pokazuju nove fičure
-4. ✅ Ljudi mogu da preuzmu i testiraju
+```
+main_widget.png ✅
+main_widget_english.png ✅
+rain_now_closeup.png ✅ (NE rain_now.png)
+hourly_forecast_tooltip.png ✅ (NE hourly_tooltip.png)
+alert_tooltip.png ✅
+pollution_tooltip.png ✅
+tray_menu.png ✅
+language_menu.png ✅
+```
 
 ---
 
-## 📞 Pomoć
+## 🎯 Commit Messages:
 
-Ako imaš problema:
-1. Proveri da li si ulogovan na GitHub
-2. Proveri da li imaš write pristup repozitorijumu
-3. Proveri da li su fajlovi ispod GitHub limite (100MB po fajlu)
+**Za Release update:**
+```
+Fix screenshot URLs and descriptions
+```
+
+**Extended (opciono):**
+```
+- Fixed rain_now.png → rain_now_closeup.png
+- Fixed hourly_tooltip.png → hourly_forecast_tooltip.png
+- Updated all screenshot URLs to use direct GitHub links
+```
 
 ---
 
-**Srećno sa objavom! 🚀**
+## 🔍 Provera:
 
-Made with ❤️ for malkosvetnik
+Nakon Update release:
+1. Osveži stranicu (Ctrl+F5)
+2. Proveri da li se slike vide
+3. Ako ne vide odmah, sačekaj 2-3 minuta (GitHub cache)
+
+---
+
+## ✅ GOTOVO!
+
+Nakon ovog upload-a, Release v2.1.0 će biti kompletan sa:
+- 🎯 Tačnim screenshot imenima
+- 🖼️ Svim slikama koje rade
+- 📝 Kompletnom dokumentacijom
+- 🔗 Linkom ka Google Drive ZIP-u
+
+---
+
+**Srećno! 🚀**
