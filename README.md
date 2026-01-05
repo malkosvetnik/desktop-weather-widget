@@ -2,7 +2,9 @@
 
 A beautiful, feature-rich desktop weather widget for Windows with real-time weather updates, precipitation alerts, and bilingual support (Serbian/English).
 
-![Weather Widget Screenshot](screenshots/main_widget.png)
+![Weather Widget Screenshot](screenshots/main_widget_english.png)
+
+*Desktop weather widget with bilingual support (Serbian/English)*
 
 ## ✨ Features
 
@@ -125,17 +127,23 @@ Right-click the tray icon for:
 
 ## 📸 Screenshots
 
-### Main Widget
+### Main Widget - Serbian
 ![Main View](screenshots/main_widget.png)
 
+### Main Widget - English (NEW in v2.1!)
+![English View](screenshots/main_widget_english.png)
+
 ### Precipitation Alert - Rain NOW
-![Rain Alert](screenshots/rain_now.png)
+![Rain Alert](screenshots/rain_now_closeup.png)
 
 ### Hourly Forecast Tooltip
-![Tooltip](screenshots/hourly_tooltip.png)
+![Hourly Forecast](screenshots/hourly_forecast_tooltip.png)
 
 ### Air Quality Tooltip
 ![Air Quality](screenshots/pollution_tooltip.png)
+
+### Language Menu
+![Language Menu](screenshots/language_menu.png)
 
 ### Tray Menu
 ![Tray Menu](screenshots/tray_menu.png)
