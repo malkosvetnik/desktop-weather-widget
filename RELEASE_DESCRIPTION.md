@@ -30,31 +30,31 @@ python weather_widget.pyw
 ## 📸 Screenshots
 
 ### English Version (NEW!)
-![English](https://github.com/malkosvetnik/desktop-weather-widget/blob/main/screenshots/main_widget_english.png?raw=true)
+![English](https://raw.githubusercontent.com/malkosvetnik/desktop-weather-widget/main/screenshots/main_widget_english.png?v=2)
 
 ### Serbian Version
-![Serbian](https://github.com/malkosvetnik/desktop-weather-widget/blob/main/screenshots/main_widget.png?raw=true)
+![Serbian](https://raw.githubusercontent.com/malkosvetnik/desktop-weather-widget/main/screenshots/main_widget.png?v=2)
 
 <details>
 <summary>More Screenshots</summary>
 
 ### Rain NOW Alert
-![Rain NOW](https://github.com/malkosvetnik/desktop-weather-widget/blob/main/screenshots/rain_now_closeup.png?raw=true)
+![Rain NOW](https://raw.githubusercontent.com/malkosvetnik/desktop-weather-widget/main/screenshots/rain_now_closeup.png?v=2)
 
 ### Hourly Forecast
-![Hourly](https://github.com/malkosvetnik/desktop-weather-widget/blob/main/screenshots/hourly_forecast_tooltip.png?raw=true)
+![Hourly](https://raw.githubusercontent.com/malkosvetnik/desktop-weather-widget/main/screenshots/hourly_forecast_tooltip.png?v=2)
 
 ### Language Menu
-![Language](https://github.com/malkosvetnik/desktop-weather-widget/blob/main/screenshots/language_menu.png?raw=true)
+![Language](https://raw.githubusercontent.com/malkosvetnik/desktop-weather-widget/main/screenshots/language_menu.png?v=2)
 
 ### Weather Alerts
-![Alerts](https://github.com/malkosvetnik/desktop-weather-widget/blob/main/screenshots/alert_tooltip.png?raw=true)
+![Alerts](https://raw.githubusercontent.com/malkosvetnik/desktop-weather-widget/main/screenshots/alert_tooltip.png?v=2)
 
 ### Air Quality
-![AQI](https://github.com/malkosvetnik/desktop-weather-widget/blob/main/screenshots/pollution_tooltip.png?raw=true)
+![AQI](https://raw.githubusercontent.com/malkosvetnik/desktop-weather-widget/main/screenshots/pollution_tooltip.png?v=2)
 
 ### Tray Menu
-![Tray](https://github.com/malkosvetnik/desktop-weather-widget/blob/main/screenshots/tray_menu.png?raw=true)
+![Tray](https://raw.githubusercontent.com/malkosvetnik/desktop-weather-widget/main/screenshots/tray_menu.png?v=2)
 
 </details>
 
