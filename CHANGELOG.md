@@ -1,136 +1,66 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## [v2.1.0] - 2026-01-05
 
-## [2.0.0] - 2026-01-01
+### 🎉 Major Updates
 
-### 🎉 Major Update - Advanced Features
+#### ✨ New Features
+- **Full English language support** - Complete UI translation alongside Serbian (switch via tray menu)
+- **Real-time precipitation detection**: Now correctly shows "Rain NOW!" / "Kiša SADA!" when it's actively raining
+- **Improved precipitation forecasting**: Accurate timing for rain, snow, and storms
+- **Enhanced tooltip system**: Hourly forecast tooltip with clickable labels
 
-#### Added
-- 🎨 **Dynamic Alert Colors** - Alerts now change background color based on severity:
-  - Green (No alerts)
-  - Yellow (Standard warnings)
-  - Red (Extreme warnings/emergencies)
-- 🖱️ **Interactive Tooltips** for Weather Alerts
-  - Hover over alerts to see full text
-  - Shows alert duration (start/end time)
-  - Displays detailed description
-- 🌧️ **Precise Precipitation Alerts**
-  - Hour-by-hour accuracy (instead of 3-hour intervals)
-  - Shows exact time until rain/snow
-  - Better forecasting with real-time data
-- 🇷🇸 **Complete Serbian Translation**
-  - All UI elements translated
-  - Weather descriptions in Serbian
-  - Alert descriptions automatically translated
-  - Fixed API typos in translation
-- 📏 **Smart Text Formatting**
-  - Auto font-sizing for long alert text
-  - Always displays in exactly 2 lines
-  - Intelligent text truncation with "..."
-  - Preserves readability
+#### 🐛 Bug Fixes
+- **Fixed "Error" translation issue**: Error messages now properly translate between Serbian/English
+- **Fixed precipitation detection logic**: 
+  - Changed from `int()` to `round()` for proper time rounding (1.9h → 2h instead of 1h)
+  - Added validation for both weather_code AND actual rain values
+  - Now checks current weather BEFORE searching for future precipitation
+- **Fixed tooltip text translation**: "Hover na ikonicu za detalje" now translates properly
+- **Fixed API data fetching**: Added `rain`, `precipitation`, and `showers` to API request
 
-#### Improved
-- 🖱️ **Air Quality Tooltips** - Enhanced clickable label system
-- 🔄 **Better Sleep/Wake Detection** - 30s delay after system wake
-- 🌐 **Improved API Error Handling** - Retry logic with progressive delays
-- 📍 **Location Detection** - Better city name mapping for Serbian cities
-- 🎯 **UI Consistency** - Unified tooltip styling across all elements
+#### 🔧 Technical Improvements
+- **Smarter time calculation**: 
+  - 1h 56min → "Rain in 2h" (previously showed "1h")
+  - 44min → "Rain in 1h" (correct)
+- **Better sleep mode handling**: Maintains all functionality after system wake
+- **Debug logging**: Added comprehensive debug output (invisible in .exe builds)
 
-#### Fixed
-- Translation bugs in alert descriptions
-- Font size consistency in alert box
-- Tooltip positioning issues
-- Registry cleanup on fresh install
-- MSL altitude references in weather data
+#### 📊 What Works Now
+| Scenario | Display |
+|----------|---------|
+| Rain falling NOW | 🌧️ Kiša SADA! / Rain NOW! |
+| Rain in 44 minutes | 🌧️ Kiša za 1h / Rain in 1h |
+| Rain in 1h 56min | 🌧️ Kiša za 2h / Rain in 2h |
+| Snow falling NOW | ❄️ Sneg SADA! / Snow NOW! |
+| Storm in 3 hours | ⛈️ Oluja za 3h / Storm in 3h |
+| No precipitation | ☀️ Nema padavina / No precipitation |
 
-### Technical Changes
-- Refactored `translateAlertDescription()` to use regex patterns
-- Added `formatAlertText()` for smart text fitting
-- Implemented `getAlertColorLevel()` for dynamic styling
-- Enhanced `ClickableLabel` class for tooltips
-- Improved `updateRainAlert()` precision with hourly data
-- Added `current_alert_data` storage for tooltips
+### 🌐 Language Support
+- Full Serbian (Latin) translation
+- Full English translation
+- Dynamic language switching
 
-## [1.0.0] - 2025-12-XX
-
-### Initial Release
-
-#### Features
-- ⏰ Real-time clock with date
-- 🌡️ Current weather conditions
-- 💨 Wind speed and direction
-- 🌅 Sunrise/sunset times
-- 📊 Atmospheric data (pressure, humidity, visibility, cloudiness)
-- ☀️ UV Index with color coding
-- 🌫️ Air Quality Index (AQI)
-- 🖱️ Interactive pollution tooltips
-- 📅 5-day weather forecast
-- 📍 Auto-location or manual city selection
-- 🔄 Configurable refresh intervals (5-60 min)
-- 🔒 Lock position feature
-- 👻 Click-through mode
-- 🚀 Windows startup option
-- 📐 Multi-resolution support (XGA to 8K)
-- 💾 Persistent settings in Windows Registry
-- 🎯 Always-on-bottom window placement
-- 🌙 System tray integration
-- 🔔 Tray notifications
-
-#### Technical Details
-- Built with PyQt5
-- OpenWeatherMap API integration
-- Windows Registry for settings storage
-- Session-based HTTP requests
-- Automatic geocoding for cities
-- Serbian city name mapping
+### 📝 Notes
+- All existing features preserved (5-day forecast, UV index, air quality, sleep mode, click-through, etc.)
+- Debug logs included but invisible in compiled .exe
+- Compatible with all previous settings
 
 ---
 
-## Version History
+## [v1.0.0] - Previous Release
+- Initial release with basic weather widget functionality
 
-| Version | Date | Description |
-|---------|------|-------------|
-| 2.0.0 | 2026-01-01 | Advanced features update |
-| 1.0.0 | 2025-12-XX | Initial release |
+### 🌐 Language Support
+- **NEW: Full English translation** - All UI elements, menus, tooltips, and error messages
+- **Serbian (Latin)** - Complete translation maintained
+- **Dynamic language switching** - Change language via tray menu without restart
+- **Translated elements**:
+  - All weather descriptions
+  - Precipitation alerts ("Rain NOW!", "Kiša SADA!")
+  - Error messages
+  - Tooltips and hover text
+  - Menu items
+  - Days of week and months
+  - All UI labels
 
----
-
-## Upgrade Notes
-
-### From 1.x to 2.0
-
-**Breaking Changes:**
-- None - fully backward compatible
-
-**New Dependencies:**
-- No new dependencies required
-
-**Settings Migration:**
-- All existing settings preserved
-- New settings added with defaults
-- Registry structure unchanged
-
-**Recommended Actions:**
-1. Close the widget completely
-2. Update to new version
-3. Restart the application
-4. Test new tooltip features
-5. Check alert color coding
-
----
-
-## Future Plans
-
-### Planned for 2.1.0
-- [ ] Weather radar integration
-- [ ] Historical data charts
-- [ ] Custom notification sounds
-- [ ] Multiple location support
-
-### Planned for 3.0.0
-- [ ] Executable (.exe) build
-- [ ] Full English language support
-- [ ] Custom theme system
-- [ ] Weather icon packs
-- [ ] Mini/compact mode

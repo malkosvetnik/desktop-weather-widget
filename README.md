@@ -1,187 +1,232 @@
 # 🌤️ Desktop Weather Widget
 
-Elegantan, funkcionalan desktop weather widget za Windows sa transparentnim pozadinama, live podacima i naprednim features-ima.
+A beautiful, feature-rich desktop weather widget for Windows with real-time weather updates, precipitation alerts, and bilingual support (Serbian/English).
 
-![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)
-![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Weather Widget Screenshot](screenshots/main_widget.png)
 
 ## ✨ Features
 
-### 🎨 Core Features
-- ⏰ **Real-time Clock** - Sat koji se ažurira svake sekunde
-- 🌡️ **Current Weather** - Trenutna temperatura, oseća se kao, vlažnost
-- 💨 **Wind Information** - Brzina vetra sa pravcem (S, SI, I, JI, J, JZ, Z, SZ)
-- 🌅 **Sun Times** - Vreme izlaska i zalaska sunca
-- 📊 **Atmospheric Data** - Pritisak, oblačnost, vidljivost
-- ☀️ **UV Index** - Sa color-coded indikatorom
-- 🌫️ **Air Quality (AQI)** - Kvalitet vazduha sa detaljnim polutantima
-- 📅 **5-Day Forecast** - Prognoza za narednih 5 dana
+### 🌡️ Current Weather
+- Real-time temperature and "feels like" temperature
+- Weather description with emoji icons
+- Humidity, wind speed & direction
+- Atmospheric pressure
+- Cloud cover percentage
+- Visibility distance
 
-### 🆕 Advanced Features
-- 🎨 **Dynamic Alert Colors** - Upozorenja menjaju boju prema nivou opasnosti:
-  - 🟢 Zeleno - Bez upozorenja
-  - 🟡 Žuto - Standardna upozorenja
-  - 🔴 Crveno - Ekstremna upozorenja
-- 🌧️ **Precipitation Alerts** - Precizne informacije o padavinama (na sat tačno)
-- ⚠️ **Weather Alerts** - Vremenska upozorenja sa tooltip-ima
-- 🖱️ **Interactive Tooltips** - Hover preko zagađenja ili upozorenja za detalje
-- 🇷🇸 **Serbian Translation** - Potpun prevod svih tekstova i upozorenja
-- 📏 **Smart Text Formatting** - Automatsko prilagođavanje veličine fonta
-- 🔄 **Auto-refresh** - Postavke od 5-60 minuta
-- 💾 **Persistent Settings** - Automatsko čuvanje pozicije i postavki
+### 🌧️ Precipitation Alerts (NEW in v2.0!)
+- **Real-time detection**: Shows "Rain NOW!" when it's actively raining
+- **Smart forecasting**: Accurate timing for upcoming rain, snow, or storms
+- **Intelligent rounding**: 1h 56min shows as "2h" (not "1h")
+- Supports rain, snow, and thunderstorms
 
-### ⚙️ Customization
-- 📍 **Auto-location ili Manual** - GPS bazirana ili ručna lokacija
-- 🔒 **Lock Position** - Zaključaj poziciju widgeta
-- 👻 **Click-through Mode** - Widget ne blokira klikove
-- 🚀 **Startup with Windows** - Automatsko pokretanje
-- 📐 **Multi-resolution Support** - Predefinirane veličine za sve ekrane (XGA do 8K)
-- 🎯 **Always-on-Bottom** - Widget uvek ispod prozora
+### 📊 Additional Information
+- **UV Index** with color-coded severity
+- **Air Quality Index (AQI)** with detailed pollutant breakdown tooltip
+- **5-Day Forecast** with min/max temperatures
+- **Hourly Forecast** (12h) - click on "SATNA PROGNOZA" box to see detailed tooltip
+- **Sunrise & Sunset** times
+
+### 🎨 Customization
+- **Bilingual**: Serbian (Latin) and English
+- **Auto-location** or manual city selection
+- **Adjustable refresh intervals**: 5, 10, 15, 30, or 60 minutes
+- **Resolution presets**: From XGA (1024x768) to 8K UHD
+- **Click-through mode**: Widget becomes transparent to clicks
+- **Position locking**: Prevent accidental movement
+- **System tray integration**: Minimize to tray
+
+### 🛌 Advanced Features
+- **Sleep mode detection**: Automatically refreshes after system wake
+- **Network retry logic**: 3 attempts with 15s delays
+- **Startup with Windows**: Optional auto-start
+- **Persistent settings**: Remembers your preferences
+
+---
+
+## 📥 Installation
+
+### Option 1: Run from Source
+1. Install Python 3.8+ and dependencies:
+   ```bash
+   pip install PyQt5 requests
+   ```
+
+2. Download `weather_widget_ABSOLUTE_FINAL.pyw`
+
+3. Get your **free** OpenWeatherMap API key:
+   - Visit https://openweathermap.org/api
+   - Sign up for a free account
+   - Copy your API key
+
+4. Run the widget:
+   ```bash
+   python weather_widget_ABSOLUTE_FINAL.pyw
+   ```
+
+5. On first run, paste your API key when prompted
+
+### Option 2: Download Compiled .exe (Coming Soon!)
+No Python installation required - just download and run!
+
+---
+
+## 🎮 Usage
+
+### Basic Controls
+- **Drag widget**: Click and drag anywhere to move (when unlocked)
+- **🔒 Lock button**: Lock/unlock position
+- **📍 Auto button**: Toggle automatic location detection
+- **Search box**: Manually enter city name
+- **✕ Close**: Hide widget (still runs in tray)
+
+### Tray Menu
+Right-click the tray icon for:
+- Show/Hide widget
+- Enable/disable startup with Windows
+- Widget-only mode (no tray icon)
+- Click-through mode
+- Resolution presets
+- Refresh weather
+- Change API key
+- Exit application
+
+### Tooltips
+- **Hover over Air Quality (Zagađenje)**: See detailed pollutant breakdown
+- **Click on SATNA PROGNOZA box**: View 12-hour forecast table
+
+---
+
+## 🐛 Bug Fixes in v2.0.0
+
+### Major Fixes
+1. **Real-time precipitation detection**
+   - Fixed: Widget now correctly shows "Rain NOW!" when it's actively raining
+   - Previously showed future rain even during active precipitation
+
+2. **Time calculation accuracy**
+   - Fixed: Changed from `int()` to `round()` for proper rounding
+   - Example: 1h 56min now correctly shows "Rain in 2h" (was "1h")
+
+3. **Translation issues**
+   - Fixed: Error messages now properly translate (Serbian/English)
+   - Fixed: Tooltip text "Hover na ikonicu za detalje" now translates
+
+4. **API data completeness**
+   - Fixed: Added `rain`, `precipitation`, `showers` to API requests
+   - Fixed: Now validates both weather_code AND actual rain values
+
+### Technical Improvements
+- Checks current weather BEFORE searching for future precipitation
+- Better error handling with translated messages
+- Comprehensive debug logging (invisible in .exe)
+
+---
 
 ## 📸 Screenshots
 
-![Main Widget](screenshots/main_widget.png)
-*Glavni interfejs sa svim informacijama*
+### Main Widget
+![Main View](screenshots/main_widget.png)
 
+### Precipitation Alert - Rain NOW
+![Rain Alert](screenshots/rain_now.png)
+
+### Hourly Forecast Tooltip
+![Tooltip](screenshots/hourly_tooltip.png)
+
+### Air Quality Tooltip
+![Air Quality](screenshots/pollution_tooltip.png)
+
+### Tray Menu
 ![Tray Menu](screenshots/tray_menu.png)
-*Tray menu sa svim opcijama*
 
-![Alert Tooltip](screenshots/alert_tooltip.png)
-*Detaljan tooltip za upozorenja sa vremenom trajanja*
+---
 
-![Pollution Details](screenshots/pollution_tooltip.png)
-*Detaljni podaci o zagađenju vazduha (CO, NO₂, O₃, SO₂, PM2.5, PM10, NH₃)*
+## 🔧 Requirements
 
-## 🚀 Installation
+- **Python**: 3.8 or higher
+- **PyQt5**: 5.15+
+- **requests**: 2.25+
+- **OpenWeatherMap API key** (free)
 
-### Prerequisites
-- Python 3.8 ili noviji
-- Windows 10/11
-- OpenWeatherMap API key (besplatan)
+---
 
-### Setup
+## 📝 Configuration
 
-1. **Clone repository:**
-```bash
-git clone https://github.com/malkosvetnik/desktop-weather-widget.git
-cd desktop-weather-widget
+Settings are automatically saved in Windows Registry under:
+```
+HKEY_CURRENT_USER\Software\WeatherWidget\Settings
 ```
 
-2. **Install dependencies:**
-```bash
-pip install -r requirements.txt
-```
+Stored settings:
+- Window position
+- Lock status
+- Click-through mode
+- Language preference
+- Refresh interval
+- API key
+- Resolution preset
 
-3. **Get FREE OpenWeatherMap API Key:**
-   - Idi na [OpenWeatherMap](https://openweathermap.org/api)
-   - Napravi besplatan nalog
-   - Kopiraj svoj API key
-   - Aplikacija će te pitati za API key pri prvom pokretanju
+---
 
-4. **Run the widget:**
-```bash
-python weather_widget_final.pyw
-```
+## 🌐 API Information
 
-## 🔧 Configuration
+This widget uses:
+- **Open-Meteo Weather API** (free, no key required)
+  - Current weather, forecasts, UV index
+  - https://open-meteo.com
 
-### First Run
-Pri prvom pokretanju aplikacija će:
-1. Zatražiti OpenWeatherMap API key
-2. Postaviti podrazumevanu lokaciju (Belgrade)
-3. Omogućiti auto-lokaciju
+- **Open-Meteo Air Quality API** (free)
+  - AQI and pollutant data
+  - https://open-meteo.com/en/docs/air-quality-api
 
-### Settings (Tray Menu)
-- **Refresh Interval** - 5/10/15/30/60 minuta
-- **Resolution Preset** - Optimizovane veličine za tvoj ekran
-- **Click-Through Mode** - Omogući klikove kroz widget
-- **Lock Position** - Zaključaj widget na mestu
-- **Startup with Windows** - Automatsko pokretanje
-
-### Manual Configuration
-Podešavanja se čuvaju u Windows Registry:
-```
-HKEY_CURRENT_USER\Software\WeatherWidget
-```
-
-Za potpuno brisanje:
-```cmd
-reg delete "HKCU\Software\WeatherWidget" /f
-```
-
-## 📋 Requirements
-
-```txt
-PyQt5>=5.15.0
-requests>=2.31.0
-```
-
-## 🎯 Usage Tips
-
-### Interactive Features
-- **Hover over AQI** - Prikaži detaljne podatke o polutantima (CO, NO₂, O₃, SO₂, PM2.5, PM10, NH₃)
-- **Hover over Alerts** - Prikaži pun tekst upozorenja sa trajanjem i opisom
-- **Double-click tray icon** - Prikaži/sakrij widget
-- **Drag widget** - Pomeri na novu poziciju (kad nije zaključan)
-
-### Keyboard Shortcuts
-Trenutno nisu implementirani - sve kontrole kroz GUI
-
-## 🌍 Supported Languages
-- 🇷🇸 **Serbian (Latinica)** - Glavni jezik
-- 🇬🇧 English - API fallback
-
-## 🐛 Known Issues
-
-- **One Call API 3.0** - Weather alerts zahtevaju plaćenu pretplatu ($40/mesec)
-  - Bez pretplate, widget će raditi ali bez detaljnih upozorenja
-- **API Activation** - Novi API key može da traje 10-15 minuta za aktivaciju
-- **Sleep/Wake** - Widget čeka 30s nakon buđenja pre osvežavanja
-
-## 🔮 Roadmap
-
-- [ ] Executable (.exe) build
-- [ ] Multi-language support (pun engleski)
-- [ ] Custom themes
-- [ ] Weather icons
-- [ ] Mini mode (kompaktna verzija)
-- [ ] Widget na više monitora
+---
 
 ## 🤝 Contributing
 
-Pull requests su dobrodošli! Za velike izmene, prvo otvori issue da diskutujemo šta želiš da promeniš.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ### Development Setup
 ```bash
 git clone https://github.com/malkosvetnik/desktop-weather-widget.git
 cd desktop-weather-widget
 pip install -r requirements.txt
-python weather_widget_final.pyw
+python weather_widget_ABSOLUTE_FINAL.pyw
 ```
-
-## 📝 License
-
-[MIT License](LICENSE)
-
-## 👨‍💻 Author
-
-**Marko Svetnik**
-- GitHub: [@malkosvetnik](https://github.com/malkosvetnik)
-
-## 🙏 Acknowledgments
-
-- Weather data powered by [OpenWeatherMap API](https://openweathermap.org/)
-- Built with [PyQt5](https://riverbankcomputing.com/software/pyqt/)
-- Icons: Unicode emoji
-
-## 📞 Support
-
-Ako naiđeš na probleme:
-1. Proveri [Issues](https://github.com/malkosvetnik/desktop-weather-widget/issues)
-2. Otvori novi Issue sa detaljima
-3. Uključi verziju Python-a i OS-a
 
 ---
 
-⭐ **Ako ti se dopada projekat, ostavi star!** ⭐
+## 📜 License
+
+This project is open source and available under the MIT License.
+
+---
+
+## 🙏 Credits
+
+- Weather data: [Open-Meteo](https://open-meteo.com)
+- Icons: Unicode emoji
+- Framework: PyQt5
+
+---
+
+## 📞 Support
+
+Found a bug or have a suggestion?
+- Open an issue: https://github.com/malkosvetnik/desktop-weather-widget/issues
+- Check existing issues first!
+
+---
+
+## 🗺️ Roadmap
+
+Future improvements:
+- [ ] More language options
+- [ ] Customizable themes
+- [ ] Weather alerts from national services
+- [ ] Radar map integration
+- [ ] Multiple location tracking
+
+---
+
+**Made with ❤️ by malkosvetnik**
