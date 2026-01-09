@@ -177,10 +177,10 @@ Right-click the tray icon for:
 ![English View](screenshots/main_widget_english.png)
 
 ### Main Widget - Serbian
-![Main View](screenshots/main_widget.png)
+![Main View](screenshots/main_widget_serbian.png)
 
-### Precipitation Alert - Rain NOW
-![Rain Alert](screenshots/rain_now_closeup.png)
+### Precipitation Alert
+![Precipitation Alert](screenshots/precipitation_alert.png)
 
 ### 15-Minute Nowcast (NEW in v2.1.6!)
 *Coming soon - screenshot of minutely forecast tooltip*
@@ -189,7 +189,7 @@ Right-click the tray icon for:
 ![Hourly Forecast](screenshots/hourly_forecast_tooltip.png)
 
 ### Air Quality Tooltip
-![Air Quality](screenshots/pollution_tooltip.png)
+![Air Quality](screenshots/air_quality_tooltip.png)
 
 ### Language Menu
 ![Language Menu](screenshots/language_menu.png)
