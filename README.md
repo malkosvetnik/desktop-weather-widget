@@ -1,10 +1,45 @@
 # 🌤️ Desktop Weather Widget
 
-A beautiful, feature-rich desktop weather widget for Windows with real-time weather updates, precipitation alerts, and bilingual support (Serbian/English).
+[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/malkosvetnik/desktop-weather-widget)](https://github.com/malkosvetnik/desktop-weather-widget/stargazers)
+[![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)](https://www.microsoft.com/windows)
+
+A beautiful, feature-rich desktop weather widget for Windows with **15-minute precision nowcast**, real-time weather updates, and bilingual support (Serbian/English).
+
+> **🎯 Better than Microsoft's built-in weather widget!**
 
 ![Weather Widget Screenshot](screenshots/main_widget_english.png)
 
-*Desktop weather widget with bilingual support (Serbian/English)*
+*Desktop weather widget with bilingual support and 15-minute nowcast precision*
+
+---
+
+## 🎊 What's New in v2.1.6
+
+### ⚡ **15-Minute Nowcast** - NEW!
+The game-changer feature that sets this widget apart:
+
+- **🎯 Radar-like precision**: See rain coming 15, 30, 45 minutes ahead
+- **📍 Minutely forecasts**: 8 intervals × 15min = 2-hour nowcast window
+- **💧 Smart detection**: Distinguishes between rain, snow, and storms
+- **🔔 Proactive alerts**: "Rain in 45 min (70%)" gives you time to react
+
+**Example alerts:**
+```
+⚡ IMMEDIATE (0-2h):   "Rain in 45 min (70%)"
+📊 SHORT-TERM (2-24h): "Rain in 6h (55%)"
+```
+
+### 🧠 4-Layer Priority System
+Intelligently prioritizes weather data:
+
+1. **Current conditions** → "Rain NOW!" (when actively raining)
+2. **Weather code validation** → Confirms precipitation type
+3. **Minutely nowcast (0-2h)** → 15-minute precision alerts
+4. **Hourly forecast (2-24h)** → Long-term planning
+
+---
 
 ## ✨ Features
 
@@ -16,7 +51,8 @@ A beautiful, feature-rich desktop weather widget for Windows with real-time weat
 - Cloud cover percentage
 - Visibility distance
 
-### 🌧️ Precipitation Alerts (NEW in v2.0!)
+### 🌧️ Precipitation Alerts
+- **🆕 15-minute nowcast** (v2.1.6): "Rain in 45 min (70%)"
 - **Real-time detection**: Shows "Rain NOW!" when it's actively raining
 - **Smart forecasting**: Accurate timing for upcoming rain, snow, or storms
 - **Intelligent rounding**: 1h 56min shows as "2h" (not "1h")
@@ -40,7 +76,9 @@ A beautiful, feature-rich desktop weather widget for Windows with real-time weat
 
 ### 🛌 Advanced Features
 - **Sleep mode detection**: Automatically refreshes after system wake
+- **Hibernate support**: Works after full system shutdown/restore
 - **Network retry logic**: 3 attempts with 15s delays
+- **Graceful degradation**: Falls back elegantly if API data missing
 - **Startup with Windows**: Optional auto-start
 - **Persistent settings**: Remembers your preferences
 
@@ -54,19 +92,14 @@ A beautiful, feature-rich desktop weather widget for Windows with real-time weat
    pip install PyQt5 requests
    ```
 
-2. Download `weather_widget_ABSOLUTE_FINAL.pyw`
+2. Download `weather_widget.pyw`
 
-3. Get your **free** OpenWeatherMap API key:
-   - Visit https://openweathermap.org/api
-   - Sign up for a free account
-   - Copy your API key
+3. **No API key required!** Uses free Open-Meteo API
 
 4. Run the widget:
    ```bash
-   python weather_widget_ABSOLUTE_FINAL.pyw
+   python weather_widget.pyw
    ```
-
-5. On first run, paste your API key when prompted
 
 ### Option 2: Download Compiled .exe (Coming Soon!)
 No Python installation required - just download and run!
@@ -90,51 +123,67 @@ Right-click the tray icon for:
 - Click-through mode
 - Resolution presets
 - Refresh weather
-- Change API key
+- Language selection (Serbian/English)
 - Exit application
 
 ### Tooltips
 - **Hover over Air Quality (Zagađenje)**: See detailed pollutant breakdown
 - **Click on SATNA PROGNOZA box**: View 12-hour forecast table
+- **Hover over precipitation alert**: See detailed nowcast timeline
 
 ---
 
-## 🐛 Bug Fixes in v2.0.0
+## 🆕 What's New - Version History
 
-### Major Fixes
-1. **Real-time precipitation detection**
-   - Fixed: Widget now correctly shows "Rain NOW!" when it's actively raining
-   - Previously showed future rain even during active precipitation
+### v2.1.6 (January 9, 2026) - NOWCAST UPDATE 🎊
 
-2. **Time calculation accuracy**
-   - Fixed: Changed from `int()` to `round()` for proper rounding
-   - Example: 1h 56min now correctly shows "Rain in 2h" (was "1h")
+#### 🚀 New Features
+- **15-minute precision nowcast** using `minutely_15` API
+- **4-layer priority system** for intelligent weather alerts
+- **Time-aware parsing**: Always shows future intervals (skips past)
+- **Snow vs rain detection**: Accurately distinguishes precipitation type
+- **Graceful API fallback**: Works even with incomplete data
 
-3. **Translation issues**
-   - Fixed: Error messages now properly translate (Serbian/English)
-   - Fixed: Tooltip text "Hover na ikonicu za detalje" now translates
+#### 🐛 Bug Fixes
+- Fixed minutely forecast time parsing (now correctly identifies future intervals)
+- Fixed precipitation type detection (snow vs rain)
+- Fixed edge cases at midnight rollover
+- Improved sleep/wake cycle handling
 
-4. **API data completeness**
-   - Fixed: Added `rain`, `precipitation`, `showers` to API requests
-   - Fixed: Now validates both weather_code AND actual rain values
+#### 🔧 Technical Improvements
+- Smart interval selection (finds first future 15-min block)
+- Better error recovery and logging
+- Optimized API requests (only fetches needed data)
+- Enhanced tooltip formatting for nowcast display
 
-### Technical Improvements
-- Checks current weather BEFORE searching for future precipitation
-- Better error handling with translated messages
-- Comprehensive debug logging (invisible in .exe)
+### v2.1.0 (January 5, 2026)
+- Full English language support
+- Real-time precipitation detection ("Rain NOW!")
+- Improved time calculation (proper rounding)
+- Fixed translation issues
+- Better API data completeness
+
+### v2.0.0 (Initial Public Release)
+- Complete weather widget with all core features
+- Serbian language support
+- Sleep mode detection
+- System tray integration
 
 ---
 
 ## 📸 Screenshots
 
+### Main Widget - English
+![English View](screenshots/main_widget_english.png)
+
 ### Main Widget - Serbian
 ![Main View](screenshots/main_widget.png)
 
-### Main Widget - English (NEW in v2.1!)
-![English View](screenshots/main_widget_english.png)
-
 ### Precipitation Alert - Rain NOW
 ![Rain Alert](screenshots/rain_now_closeup.png)
+
+### 15-Minute Nowcast (NEW in v2.1.6!)
+*Coming soon - screenshot of minutely forecast tooltip*
 
 ### Hourly Forecast Tooltip
 ![Hourly Forecast](screenshots/hourly_forecast_tooltip.png)
@@ -155,7 +204,7 @@ Right-click the tray icon for:
 - **Python**: 3.8 or higher
 - **PyQt5**: 5.15+
 - **requests**: 2.25+
-- **OpenWeatherMap API key** (free)
+- **No API key required!** (uses free Open-Meteo API)
 
 ---
 
@@ -172,16 +221,19 @@ Stored settings:
 - Click-through mode
 - Language preference
 - Refresh interval
-- API key
 - Resolution preset
+- Startup mode
 
 ---
 
 ## 🌐 API Information
 
-This widget uses:
+This widget uses **100% free APIs** with no registration required:
+
 - **Open-Meteo Weather API** (free, no key required)
   - Current weather, forecasts, UV index
+  - **Minutely 15-min forecasts** (nowcast)
+  - Hourly and daily forecasts
   - https://open-meteo.com
 
 - **Open-Meteo Air Quality API** (free)
@@ -199,8 +251,33 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 git clone https://github.com/malkosvetnik/desktop-weather-widget.git
 cd desktop-weather-widget
 pip install -r requirements.txt
-python weather_widget_ABSOLUTE_FINAL.pyw
+python weather_widget.pyw
 ```
+
+### Testing Checklist
+- [ ] Test on Windows 10 and 11
+- [ ] Test sleep/wake cycle
+- [ ] Test hibernate recovery
+- [ ] Test network disconnection
+- [ ] Test both languages (Serbian/English)
+- [ ] Test all resolution presets
+- [ ] Test multi-monitor setup
+
+---
+
+## 🐛 Known Issues & Troubleshooting
+
+### Widget doesn't refresh after sleep
+- Solution: Widget has built-in 30s delay after wake - this is intentional to wait for network
+
+### Nowcast shows no data
+- Solution: Minutely forecasts are only available for some regions - widget gracefully falls back to hourly
+
+### High DPI scaling issues
+- Solution: Use resolution presets from tray menu to match your display
+
+### Report other issues
+- Open an issue: https://github.com/malkosvetnik/desktop-weather-widget/issues
 
 ---
 
@@ -215,6 +292,7 @@ This project is open source and available under the MIT License.
 - Weather data: [Open-Meteo](https://open-meteo.com)
 - Icons: Unicode emoji
 - Framework: PyQt5
+- Developed with ❤️ and lots of ☕
 
 ---
 
@@ -223,18 +301,53 @@ This project is open source and available under the MIT License.
 Found a bug or have a suggestion?
 - Open an issue: https://github.com/malkosvetnik/desktop-weather-widget/issues
 - Check existing issues first!
+- Star ⭐ the repo if you find it useful!
 
 ---
 
 ## 🗺️ Roadmap
 
-Future improvements:
-- [ ] More language options
-- [ ] Customizable themes
-- [ ] Weather alerts from national services
-- [ ] Radar map integration
+### Upcoming Features
+- [ ] Desktop notifications (Windows toast)
+- [ ] Customizable themes (dark/light/auto)
+- [ ] More language options (German, French, Spanish)
+- [ ] Widget size presets (small/medium/large)
 - [ ] Multiple location tracking
+- [ ] Weather radar integration
+- [ ] Severe weather alerts
+
+### Long-term Goals
+- [ ] Microsoft Store release
+- [ ] macOS/Linux support
+- [ ] Mobile companion app
+- [ ] Smart home integration
 
 ---
 
-**Made with ❤️ by malkosvetnik**
+## 🌟 Why This Widget?
+
+### vs. Microsoft Weather Widget
+✅ **15-minute nowcast** (Microsoft: hourly only)  
+✅ **Always visible on desktop** (Microsoft: hidden in sidebar)  
+✅ **Bilingual support** (Microsoft: system language only)  
+✅ **No telemetry** (Microsoft: tracks usage)  
+✅ **Fully customizable** (Microsoft: limited options)  
+✅ **Open source** (Microsoft: closed)
+
+### vs. Rainmeter
+✅ **Simpler to use** (no skin configuration needed)  
+✅ **Lower resource usage** (Python vs Rainmeter engine)  
+✅ **Better precipitation alerts** (smart 4-layer system)  
+✅ **Built-in sleep mode handling** (Rainmeter skins often break)
+
+### vs. Web-based Widgets
+✅ **No browser required** (native desktop app)  
+✅ **Works offline** (shows last cached data)  
+✅ **Lower latency** (direct API calls)  
+✅ **Privacy-focused** (no tracking scripts)
+
+---
+
+**Made with ❤️ by [malkosvetnik](https://github.com/malkosvetnik)**
+
+*If you find this widget useful, please consider starring ⭐ the repository!*

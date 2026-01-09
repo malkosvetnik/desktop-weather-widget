@@ -3,6 +3,8 @@ import requests
 import json
 import os
 import re
+import socket
+import time
 from datetime import datetime
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QLabel, QPushButton, QSystemTrayIcon,
@@ -48,6 +50,9 @@ class WeatherWidget(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        # Online/offline status (ne ruši widget kad nema interneta)
+        self.is_online = True
+
         # QSettings za čuvanje postavki
         self.settings = QSettings('WeatherWidget', 'Settings')
 
@@ -80,7 +85,11 @@ class WeatherWidget(QMainWindow):
                 "visibility": "👁️ Vidljivost",
                 "sunrise": "🌅 Izlazak",
                 "sunset": "🌇 Zalazak",
-                
+
+                # Status text
+                "last_updated_fmt": "🕒 Poslednje ažuriranje: {}",
+                "offline_waiting": "🌐 offline – čekam internet",
+                "sleep_detected": "💤 sleep detektovan",
                 # Buttons & Actions
                 "auto_location": "📍 Auto",
                 "unlock": "🔓 Otključaj",
@@ -218,7 +227,11 @@ class WeatherWidget(QMainWindow):
                 "visibility": "👁️ Visibility",
                 "sunrise": "🌅 Sunrise",
                 "sunset": "🌇 Sunset",
-                
+
+                # Status text
+                "last_updated_fmt": "🕒 Last updated: {}",
+                "offline_waiting": "🌐 offline – waiting for internet",
+                "sleep_detected": "💤 sleep detected",
                 # Buttons & Actions
                 "auto_location": "📍 Auto",
                 "unlock": "🔓 Unlock",
@@ -385,6 +398,23 @@ class WeatherWidget(QMainWindow):
         self.sleep_check_timer = QTimer()
         self.sleep_check_timer.timeout.connect(self.checkForSleepWake)
         self.sleep_check_timer.start(5000)
+        
+        # ✅ NOVO: Provera connection health-a (svaki 10 sekundi)
+        self.connection_check_timer = QTimer()
+        self.connection_check_timer.timeout.connect(self.checkConnectionHealth)
+        self.connection_check_timer.start(10000)  # Proveri svaki 10 sekundi
+
+        # --- Wake backoff / sleep-safe refresh ---
+        self._sleep_detected = False
+        self._wakeup_retry_in_progress = False
+        self._wake_backoff = 5
+        self._wake_backoff_max = 300
+        self._wake_retry_timer = QTimer()
+        self._wake_retry_timer.setSingleShot(True)
+        self._wake_retry_timer.timeout.connect(self._wakeRetry)
+
+        # --- Last successful update time ---
+        self._last_updated_time = None
 
     def initUI(self):
         self.setWindowTitle('Vremenska Prognoza')
@@ -568,7 +598,7 @@ class WeatherWidget(QMainWindow):
         self.date_label.setAttribute(Qt.WA_TransparentForMouseEvents)
         container_layout.addWidget(self.date_label)
 
-        container_layout.addSpacing(15)
+        container_layout.addSpacing(6)
 
         # Temperatura
         self.temp_label = QLabel("--°C")
@@ -584,7 +614,22 @@ class WeatherWidget(QMainWindow):
         self.desc_label.setAttribute(Qt.WA_TransparentForMouseEvents)
         container_layout.addWidget(self.desc_label)
 
-        container_layout.addSpacing(15)
+        # Offline status (mali/sivi tekst) - ne briše poslednje podatke
+        self.offline_status_label = QLabel("")
+        self.offline_status_label.setAlignment(Qt.AlignCenter)
+        self.offline_status_label.setStyleSheet("color: rgba(255, 255, 255, 0.55); font-size: 11px; font-style: italic;")
+        self.offline_status_label.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.offline_status_label.hide()
+        container_layout.addWidget(self.offline_status_label)
+
+        # ✅ Last updated (stays even when offline/sleep)
+        self.last_updated_label = QLabel(self.t("last_updated_fmt").format("--:--"))
+        self.last_updated_label.setAlignment(Qt.AlignCenter)
+        self.last_updated_label.setStyleSheet("color: rgba(255, 255, 255, 0.55); font-size: 11px;")
+        self.last_updated_label.setAttribute(Qt.WA_TransparentForMouseEvents)
+        container_layout.addWidget(self.last_updated_label)
+
+        container_layout.addSpacing(6)
 
         # Info panel - PRVI RED (Oseća se, Vlažnost, Vetar sa pravcem)
         info_panel_1 = QHBoxLayout()
@@ -1278,7 +1323,7 @@ class WeatherWidget(QMainWindow):
                 'sunday': 'Nedelja'
             }
             day_translated = day_full_sr.get(day_name, day_name)
-            month_translated = self.t(month_key)
+            month_translated = self.t(month_key).capitalize()  # ✅ VELIKO SLOVO
             return f"{day_translated}, {date.day} {month_translated} {date.year}"
         else:
             # Za engleski: "Monday, 3 January 2026"
@@ -1313,44 +1358,124 @@ class WeatherWidget(QMainWindow):
             self._last_date = current_date
 
     def checkForSleepWake(self):
-        """Proveri da li se računar probudio iz sleep moda"""
+        """Detektuje sleep/wake i radi safe refresh sa exponential backoff-om."""
         now = datetime.now()
         time_diff = (now - self.last_update).total_seconds()
-
-        if time_diff > 30:
-            print("🔄 Detektovan sleep/wake - ČEKAM 30 SEKUNDI pre osvežavanja...")
-
-            # Prikaži korisniku
-            self.desc_label.setText("💤 Računar se probudio, čekam 30s...")
-
-            # ČEKAJ 30 SEKUNDI pre nego što pokušaš
-            QTimer.singleShot(30000, self.startWakeupRefresh)
-
         self.last_update = now
 
-    def startWakeupRefresh(self):
-        """✅ FIX: Počni osvežavanje nakon što je prošlo dovoljno vremena + resetuj click-through"""
-        print("🔄 30s prošlo, resetujem session i osvežavam...")
+        # Ako je prošlo dosta vremena između tick-ova, verovatno je bio sleep/hibernation
+        if time_diff > 60:
+            self._sleep_detected = True
+            self._wake_backoff = 5
+            # Ne diramo glavne podatke (temp/desc/prognozu), samo mali status
+            self.showSleepStatus("čekam stabilizaciju mreže")
 
-        # Resetuj session
+            # Zaustavi standardni refresh timer da ne spamuje dok se sistem budi
+            try:
+                if hasattr(self, 'timer') and self.timer.isActive():
+                    self.timer.stop()
+            except Exception:
+                pass
+
+            # Zakaži prvi pokušaj posle wake-a
+            self._scheduleWakeRetry()
+
+    def _scheduleWakeRetry(self):
+        """Zakaži wake retry (single-shot) ako već nije zakazan."""
         try:
-            self.session.close()
-            self.session = requests.Session()
-            print("✅ Session resetovan")
-        except Exception as e:
-            print(f"⚠️ Greška pri resetovanju: {e}")
+            if not self._wake_retry_timer.isActive():
+                self._wake_retry_timer.start(int(self._wake_backoff * 1000))
+        except Exception:
+            pass
 
-        self.desc_label.setText("🔄 Osvežavam...")
+    def _wakeRetry(self):
+        """Pokuša osvežavanje posle wake-a uz exponential backoff."""
+        # Pokušaj brzu DNS proveru pre API poziva
+        try:
+            socket.getaddrinfo('api.open-meteo.com', 443)
+        except Exception:
+            # DNS još nije spreman – ostani u sleep statusu i zakaži ponovo
+            self.showSleepStatus("čekam mrežu")
+            self._wake_backoff = min(self._wake_backoff * 2, self._wake_backoff_max)
+            self._scheduleWakeRetry()
+            return
 
-        # ✅ KLJUČNA PROMENA: Resetuj click-through mode PRVO (pre API poziva!)
-        if self.click_through:
-            print("🔄 Resetujem click-through mode PRVO...")
-            self.applyClickThroughMode()
-            # Čekaj 200ms da se UI stabilizuje
-            QTimer.singleShot(200, lambda: self.retryUpdateWeather(attempt=1, max_attempts=3))
+        # DNS radi – pokušaj pravi refresh
+        self._wakeup_retry_in_progress = True
+        try:
+            self.updateWeather()
+        finally:
+            self._wakeup_retry_in_progress = False
+
+        if self.is_online:
+            # Uspeh: skloni sleep status, resetuj backoff, vrati standardni timer
+            self._sleep_detected = False
+            self._wake_backoff = 5
+            self.hideSleepStatus()
+            try:
+                if hasattr(self, 'timer') and not self.timer.isActive():
+                    self.timer.start(self.refresh_interval)
+            except Exception:
+                pass
         else:
-            # Ako nije click-through, pozovi odmah
-            self.retryUpdateWeather(attempt=1, max_attempts=3)
+            # Još uvek offline: nastavi backoff
+            self.showSleepStatus("offline nakon wake-a")
+            self._wake_backoff = min(self._wake_backoff * 2, self._wake_backoff_max)
+            self._scheduleWakeRetry()
+
+    def showSleepStatus(self, reason: str = ""):
+        """Prikaži mali sleep status (ne dira poslednje podatke)."""
+        if hasattr(self, "offline_status_label"):
+            txt = self.t("sleep_detected")
+            if reason:
+                txt += f" – {reason}"
+            self.offline_status_label.setText(txt)
+            self.offline_status_label.show()
+
+    def hideSleepStatus(self):
+        """Sakrij sleep status."""
+        # Ne skrivamo ako smo još offline (tada showOfflineStatus može da ga drži)
+        if hasattr(self, "offline_status_label") and self.is_online:
+            self.offline_status_label.hide()
+
+    def showOfflineStatus(self, reason: str = ""):
+        """Prikaži mali offline status i zadrži poslednje prikazane podatke."""
+        if getattr(self, '_sleep_detected', False):
+            # Ne prepisuj sleep status dok traje wake recovery
+            self.is_online = False
+            return
+
+        if hasattr(self, "offline_status_label"):
+            txt = self.t("offline_waiting")
+            if reason:
+                txt += f" ({reason})"
+            self.offline_status_label.setText(txt)
+            self.offline_status_label.show()
+        self.is_online = False
+
+    def hideOfflineStatus(self):
+        """Sakrij offline status (pozovi nakon prvog uspešnog osvežavanja)."""
+        if hasattr(self, "offline_status_label"):
+            self.offline_status_label.hide()
+        self.is_online = True
+
+    def checkConnectionHealth(self):
+        """Diskretno proverava da li se internet vratio (bez rušenja UI-ja)."""
+        try:
+            # Brza DNS provera (ne blokira dugo)
+            socket.getaddrinfo("api.open-meteo.com", 443)
+
+            # Ako smo bili offline, čim DNS proradi – uradi jedno osvežavanje
+            if not self.is_online:
+                print("🌐 Internet se vratio – osvežavam vreme...")
+                # Ne diramo postojeće labele dok ne dobijemo validan odgovor
+                self.updateWeather()
+
+        except Exception:
+            # Nema DNS / nema interneta – samo prikaži status, NE briši stare podatke
+            if self.is_online:
+                print("🌐 Internet/DNS je nedostupan – prelazim u offline režim (zadržavam poslednje podatke).")
+            self.showOfflineStatus()
 
     def retryUpdateWeather(self, attempt=1, max_attempts=3):
         """Pokušaj da osvežiš vreme sa progresivnim čekanjem"""
@@ -1374,6 +1499,23 @@ class WeatherWidget(QMainWindow):
                 # ✅ Prikazi bar nešto umesto praznog
                 self.temp_label.setText("--°C")
                 self.weather_alert_label.setText("⚠️ Nema podataka")
+
+            # Last updated / status texts (also translate when language changes)
+            try:
+                if hasattr(self, 'last_updated_label'):
+                    if getattr(self, '_last_updated_time', None):
+                        self.last_updated_label.setText(self.t("last_updated_fmt").format(self._last_updated_time.strftime("%H:%M")))
+                    else:
+                        self.last_updated_label.setText(self.t("last_updated_fmt").format("--:--"))
+                if hasattr(self, 'offline_status_label') and self.offline_status_label.isVisible():
+                    # Preserve whether it is sleep or offline message
+                    if getattr(self, '_sleep_detected', False):
+                        self.offline_status_label.setText(self.t("sleep_detected"))
+                    else:
+                        self.offline_status_label.setText(self.t("offline_waiting"))
+            except Exception:
+                pass
+
         except Exception as e:
             # ✅ Neka druga greška (API parse, itd.)
             print(f"❌ Greška pri ažuriranju: {type(e).__name__}: {e}")
@@ -2090,6 +2232,18 @@ class WeatherWidget(QMainWindow):
             # Header elements
             self.interval_label.setText(self.t("refresh_interval"))
             self.location_input.setPlaceholderText(self.t("search_placeholder"))
+            # Translate dynamic labels too (last updated / offline / sleep)
+            if hasattr(self, 'last_updated_label'):
+                if getattr(self, '_last_updated_time', None):
+                    self.last_updated_label.setText(self.t('last_updated_fmt').format(self._last_updated_time.strftime('%H:%M')))
+                else:
+                    self.last_updated_label.setText(self.t('last_updated_fmt').format('--:--'))
+            if hasattr(self, 'offline_status_label') and self.offline_status_label.isVisible():
+                if getattr(self, '_sleep_detected', False):
+                    self.offline_status_label.setText(self.t('sleep_detected'))
+                else:
+                    self.offline_status_label.setText(self.t('offline_waiting'))
+
             
             # Info panel labels
             self.feels_text.setText(self.t("feels_like"))
@@ -2134,6 +2288,19 @@ class WeatherWidget(QMainWindow):
                     self.lock_btn.setToolTip(tooltip_text)
             
             print(f"✅ UI ažuriran na jezik: {self.current_language}")
+            # Last updated / status texts (translate when language changes)
+            if hasattr(self, 'last_updated_label'):
+                if getattr(self, '_last_updated_time', None):
+                    self.last_updated_label.setText(self.t('last_updated_fmt').format(self._last_updated_time.strftime('%H:%M')))
+                else:
+                    self.last_updated_label.setText(self.t('last_updated_fmt').format('--:--'))
+            if hasattr(self, 'offline_status_label') and self.offline_status_label.isVisible():
+                # Preserve whether it is sleep or offline message
+                if getattr(self, '_sleep_detected', False):
+                    self.offline_status_label.setText(self.t('sleep_detected'))
+                else:
+                    self.offline_status_label.setText(self.t('offline_waiting'))
+
         except Exception as e:
             print(f"❌ Greška u updateLanguageUI: {e}")
             import traceback
@@ -2452,6 +2619,10 @@ class WeatherWidget(QMainWindow):
 
     def updateWeather(self):
         """Ažuriraj vremenske podatke sa Open-Meteo API"""
+        # Ako smo u sleep recovery modu, ne radi regularni refresh (osim wake retry-a)
+        if getattr(self, '_sleep_detected', False) and not getattr(self, '_wakeup_retry_in_progress', False):
+            return
+
         try:
             location_data = None
 
@@ -2475,12 +2646,31 @@ class WeatherWidget(QMainWindow):
             print(f"🔄 Učitavam vreme za: {city_name}")
 
             # Open-Meteo Weather API
-            weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover&hourly=temperature_2m,weather_code,precipitation_probability,precipitation,rain,showers,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&timezone=auto"
+            # ✅ v2.1.5: Dodato minutely_15 za "nowcast" preciznost (0-2h)
+            weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover,rain,snowfall&minutely_15=precipitation,precipitation_probability,rain,showers,snowfall&hourly=temperature_2m,weather_code,precipitation_probability,precipitation,rain,showers,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&timezone=auto"
             
-            response = self.session.get(weather_url, timeout=15)
+            try:
+                response = self.session.get(weather_url, timeout=15)
+            except requests.exceptions.RequestException as e:
+                # Offline / DNS / timeout – ne diraj poslednje podatke, samo pokaži status
+                print(f"❌ Mrežna greška: {e}")
+                self.showOfflineStatus()
+                return
+
 
             if response.status_code == 200:
                 data = response.json()
+                self.hideOfflineStatus()
+                # ✅ Last updated timestamp (stays visible even when offline/sleep)
+                self._last_updated_time = datetime.now()
+                if hasattr(self, 'last_updated_label'):
+                    self.last_updated_label.setText(self.t('last_updated_fmt').format(self._last_updated_time.strftime('%H:%M')))
+                # Ako smo bili u sleep recovery modu, skloni status
+                if getattr(self, '_sleep_detected', False):
+                    self._sleep_detected = False
+                    self._wake_backoff = 5
+                    self.hideSleepStatus()
+                
                 current = data['current']
                 
                 temp = round(current['temperature_2m'], 1)
@@ -2493,7 +2683,25 @@ class WeatherWidget(QMainWindow):
                 cloudiness = current['cloud_cover']
                 
                 weather_code = current['weather_code']
-                weather_icon, desc = self.getWeatherDescription(weather_code)
+                
+                # ✅ PRIORITET 1: Proveri da li ZAISTA pada nešto
+                # Ovo će se poklapati sa "Kiša SADA!" u Padavine box-u!
+                current_rain = current.get('rain', 0)
+                current_snow = current.get('snowfall', 0)
+                
+                if current_rain > 0:
+                    # Pada kiša - override weather_code!
+                    weather_icon = "🌧️"
+                    desc = "Kiša" if self.current_language == "sr" else "Rain"
+                    print(f"   ✅ OPIS: Kiša (rain={current_rain}mm mereno)")
+                elif current_snow > 0:
+                    # Pada sneg - override weather_code!
+                    weather_icon = "❄️"
+                    desc = "Sneg" if self.current_language == "sr" else "Snow"
+                    print(f"   ✅ OPIS: Sneg (snowfall={current_snow}mm mereno)")
+                else:
+                    # Normalno - koristi weather_code
+                    weather_icon, desc = self.getWeatherDescription(weather_code)
                 
                 visibility = data['hourly']['visibility'][0] / 1000 if 'visibility' in data['hourly'] and data['hourly']['visibility'] else 10.0
                 
@@ -2508,7 +2716,7 @@ class WeatherWidget(QMainWindow):
                 self.current_temp = f"{int(temp)}°"
                 self.city_label.setText(self.normalizeCityName(city_name))
                 self.temp_label.setText(f"{weather_icon} {temp}°C")
-                self.desc_label.setText(desc)
+                self.desc_label.setText(desc.capitalize())  # ✅ VELIKO SLOVO (oblačno → Oblačno)
                 self.feels_label.setText(f"{feels}°C")
                 self.humid_label.setText(f"{humidity}%")
                 self.wind_label.setText(f"{wind_speed} km/h {wind_direction}")
@@ -2533,10 +2741,37 @@ class WeatherWidget(QMainWindow):
                 self.update5DayForecast(data, location_data)
                 
             else:
+                # API greška - resetuj sve labele
                 self.desc_label.setText(f"❌ API greška: {response.status_code}")
+                self.temp_label.setText("--°C")
+                error_text = "Greška" if self.current_language == "sr" else "Error"
+                self.precip_alert_label.setText(f"⚠️ {error_text}")
+                no_data_text = "Nema podataka" if self.current_language == "sr" else "No data"
+                self.weather_alert_label.setText(f"⚠️ {no_data_text}")
+                
+                # ✅ Resetuj i 5-day prognozu
+                for i in range(5):
+                    self.forecast_labels[i]['day'].setText("---")
+                    self.forecast_labels[i]['desc'].setText("---")
+                    self.forecast_labels[i]['temp'].setText("--- / ---")
+                
+                print(f"❌ API greška: HTTP {response.status_code}")
 
         except Exception as e:
+            # Exception - resetuj sve labele
             self.desc_label.setText(f"❌ Greška: {str(e)}")
+            self.temp_label.setText("--°C")
+            error_text = "Greška" if self.current_language == "sr" else "Error"
+            self.precip_alert_label.setText(f"⚠️ {error_text}")
+            no_data_text = "Nema podataka" if self.current_language == "sr" else "No data"
+            self.weather_alert_label.setText(f"⚠️ {no_data_text}")
+            
+            # ✅ Resetuj i 5-day prognozu
+            for i in range(5):
+                self.forecast_labels[i]['day'].setText("---")
+                self.forecast_labels[i]['desc'].setText("---")
+                self.forecast_labels[i]['temp'].setText("--- / ---")
+            
             print(f"❌ Greška: {e}")
 
     
@@ -2571,8 +2806,11 @@ class WeatherWidget(QMainWindow):
                 day_translated = self.t(day_key).capitalize()  # "Pon" ili "Mon"
                 date_display = date_obj.strftime('%d.%m')
                 
+                # ✅ CAPITALIZE description (oblačno → Oblačno)
+                desc_capitalized = desc.capitalize() if desc else desc
+                
                 self.forecast_labels[i]['day'].setText(f"{day_translated} {date_display}")
-                self.forecast_labels[i]['desc'].setText(f"{weather_icon} {desc}")
+                self.forecast_labels[i]['desc'].setText(f"{weather_icon} {desc_capitalized}")
                 self.forecast_labels[i]['temp'].setText(f"{temp_min}° / {temp_max}°")
             
             print("✅ 5-dnevna prognoza ažurirana")
@@ -2583,7 +2821,130 @@ class WeatherWidget(QMainWindow):
             
         except Exception as e:
             print(f"❌ Greška pri 5-day prognozi: {e}")
+            # ✅ Resetuj 5-day labele na fallback vrednosti
+            for i in range(5):
+                self.forecast_labels[i]['day'].setText("---")
+                self.forecast_labels[i]['desc'].setText("---")
+                self.forecast_labels[i]['temp'].setText("--- / ---")
+            
+            # ✅ Resetuj i padavine/hourly
+            error_text = "Greška" if self.current_language == "sr" else "Error"
+            self.precip_alert_label.setText(f"⚠️ {error_text}")
+            no_data_text = "Nema podataka" if self.current_language == "sr" else "No data"
+            self.weather_alert_label.setText(f"⚠️ {no_data_text}")
 
+    def checkRainSoon(self, minutely_data):
+        """
+        ✅ v2.1.5: Proveri padavine u sledećih 2h (8 intervala x 15min)
+        Ovo daje "nowcast" preciznost - kao radar!
+        """
+        if not minutely_data:
+            return None
+        
+        times = minutely_data.get('time', [])
+        probs = minutely_data.get('precipitation_probability', [])
+        precip = minutely_data.get('precipitation', [])
+        rain = minutely_data.get('rain', [])
+        snowfall = minutely_data.get('snowfall', [])
+        
+        if not times or not probs:
+            return None
+        
+        # ✅ NAĐI PRVI BUDUĆI INTERVAL (trenutno vreme ili kasnije)
+        from datetime import datetime
+        current_time = datetime.now()
+        start_index = None
+        
+        for idx, time_str in enumerate(times):
+            try:
+                forecast_time = datetime.fromisoformat(time_str)
+                if forecast_time >= current_time:
+                    start_index = idx
+                    break
+            except:
+                continue
+        
+        if start_index is None:
+            return None  # Nema budućih intervala
+        
+        # Prvih 8 BUDUĆIH intervala = 2h (8 x 15min)
+        for i in range(8):
+            idx = start_index + i
+            if idx >= len(times):
+                break  # Nema više podataka
+            
+            prob = probs[idx] if idx < len(probs) else 0
+            rain_val = rain[idx] if idx < len(rain) else 0
+            snow_val = snowfall[idx] if idx < len(snowfall) else 0
+            precip_val = precip[idx] if idx < len(precip) else 0
+            
+            # PRECIPITATION SOON ako:
+            # - Verovatnoća >= 60% ILI
+            # - Precipitation >= 0.1mm (stvarno pada kiša/sneg)
+            if prob >= 60 or precip_val >= 0.1:
+                minutes = (i + 1) * 15
+                
+                # ✅ Razlikuj kišu od snega!
+                if snow_val > 0:
+                    # SNEG!
+                    if self.current_language == "sr":
+                        if minutes < 60:
+                            text = f"Sneg za {minutes} min ({prob}%)"
+                        else:
+                            hours = minutes // 60
+                            remaining_min = minutes % 60
+                            if remaining_min == 0:
+                                text = f"Sneg za {hours}h ({prob}%)"
+                            else:
+                                text = f"Sneg za {hours}h {remaining_min}min ({prob}%)"
+                    else:
+                        if minutes < 60:
+                            text = f"Snow in {minutes} min ({prob}%)"
+                        else:
+                            hours = minutes // 60
+                            remaining_min = minutes % 60
+                            if remaining_min == 0:
+                                text = f"Snow in {hours}h ({prob}%)"
+                            else:
+                                text = f"Snow in {hours}h {remaining_min}min ({prob}%)"
+                    
+                    return ("snow_soon", text, prob)
+                else:
+                    # KIŠA ili generalna padavina
+                    if self.current_language == "sr":
+                        if minutes < 60:
+                            text = f"Kiša za {minutes} min ({prob}%)"
+                        else:
+                            hours = minutes // 60
+                            remaining_min = minutes % 60
+                            if remaining_min == 0:
+                                text = f"Kiša za {hours}h ({prob}%)"
+                            else:
+                                text = f"Kiša za {hours}h {remaining_min}min ({prob}%)"
+                    else:
+                        if minutes < 60:
+                            text = f"Rain in {minutes} min ({prob}%)"
+                        else:
+                            hours = minutes // 60
+                            remaining_min = minutes % 60
+                            if remaining_min == 0:
+                                text = f"Rain in {hours}h ({prob}%)"
+                            else:
+                                text = f"Rain in {hours}h {remaining_min}min ({prob}%)"
+                    
+                    return ("rain_soon", text, prob)
+        
+        # Proveri da li ima MOGUĆE kiše (30-59%)
+        max_prob = max(probs[start_index:start_index+8]) if start_index is not None and start_index < len(probs) else 0
+        if max_prob >= 30:
+            if self.current_language == "sr":
+                text = f"Moguća kiša ({max_prob}%)"
+            else:
+                text = f"Possible rain ({max_prob}%)"
+            return ("possible", text, max_prob)
+        
+        # NO RAIN u sledećih 2h
+        return None
     
     def updateRainAlert(self, weather_data):
         """Proveri padavine iz Open-Meteo hourly podataka"""
@@ -2595,7 +2956,24 @@ class WeatherWidget(QMainWindow):
                 self.precip_alert_label.setText(f"☀️ {self.t('no_precipitation')}")
                 return
             
-            # ✅ PRVO: Proveri da li SADA pada kiša (iz current weather_code)
+            # ✅ PRIORITET 1: Proveri da li ZAISTA pada nešto (current precipitation)
+            # Ovo je tačnije od weather_code!
+            current_rain = current.get('rain', 0)
+            current_snow = current.get('snowfall', 0)
+            
+            if current_rain > 0:
+                rain_text = "Kiša SADA!" if self.current_language == "sr" else "Rain NOW!"
+                self.precip_alert_label.setText(f"🌧️ {rain_text}")
+                print(f"   ✅ TRENUTNA KIŠA: rain={current_rain}mm (mereno!)")
+                return
+            
+            if current_snow > 0:
+                snow_text = "Sneg SADA!" if self.current_language == "sr" else "Snow NOW!"
+                self.precip_alert_label.setText(f"❄️ {snow_text}")
+                print(f"   ✅ TRENUTNI SNEG: snowfall={current_snow}mm (mereno!)")
+                return
+            
+            # ✅ PRIORITET 2: Proveri weather_code (fallback ako nema rain/snow data)
             current_code = current.get('weather_code', 0)
             
             # Kiša kodovi: 51,53,55,56,57,61,63,65,66,67,80,81,82
@@ -2619,6 +2997,30 @@ class WeatherWidget(QMainWindow):
                 print(f"   ✅ TRENUTNA OLUJA: weather_code={current_code}")
                 return
             
+            # ✅ PRIORITET 3: Proveri minutely_15 (nowcast 0-2h)
+            minutely = weather_data.get('minutely_15', {})
+            rain_soon = self.checkRainSoon(minutely)
+            
+            if rain_soon:
+                alert_type, text, prob = rain_soon
+                
+                if alert_type == "rain_soon":
+                    # Kiša uskoro (visoka verovatnoća)
+                    self.precip_alert_label.setText(f"🌧️ {text}")
+                    print(f"   ✅ KIŠA USKORO (nowcast): {text}")
+                    return
+                elif alert_type == "snow_soon":
+                    # Sneg uskoro (visoka verovatnoća)
+                    self.precip_alert_label.setText(f"❄️ {text}")
+                    print(f"   ✅ SNEG USKORO (nowcast): {text}")
+                    return
+                elif alert_type == "possible":
+                    # Moguća kiša (30-59%)
+                    self.precip_alert_label.setText(f"🌦️ {text}")
+                    print(f"   ⚠️ MOGUĆA KIŠA (nowcast): {text}")
+                    return
+            
+            # ✅ PRIORITET 4: Proveri hourly (2-24h)
             times = hourly.get('time', [])
             weather_codes = hourly.get('weather_code', [])
             
@@ -2654,39 +3056,70 @@ class WeatherWidget(QMainWindow):
                 
                 code = weather_codes[i]
                 
-                # ✅ VAŽNO: Proveri I code I stvarnu rain vrednost!
+                # ✅ POBOLJŠANO: Uzmi u obzir i verovatnoću padavina!
                 rain_val = hourly.get('rain', [])[i] if i < len(hourly.get('rain', [])) else 0
                 precip_val = hourly.get('precipitation', [])[i] if i < len(hourly.get('precipitation', [])) else 0
+                precip_prob = hourly.get('precipitation_probability', [])[i] if i < len(hourly.get('precipitation_probability', [])) else 0
                 
-                # Samo ako ZAISTA ima padavina (ne samo code)
-                if (rain_val > 0 or precip_val > 0) and code in [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82]:
+                # ✅ OPTIMIZOVANO: 40% threshold kao Today Weather!
+                # Empirijski test pokazao: Today Weather prikazuje od ~43%
+                has_rain_risk = (precip_prob > 40) or (rain_val > 0) or (precip_val > 0)
+                
+                # ✅ KLJUČNO: Relaksiraj code proveru za VISOKE verovatnoće!
+                # Problem: API ponekad kaže 75% kiša ali code = 3 (oblačno)
+                # Rešenje: Ako je prob > 50%, prikaži bez obzira na code!
+                code_check_passed = (code in [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82]) or (precip_prob > 50)
+                
+                if has_rain_risk and code_check_passed:
                     if hours_until == 1:
-                        text = f"{self.t('rain_in')} 1h"
+                        # Prikaži verovatnoću ako postoji
+                        if precip_prob > 0:
+                            text = f"{self.t('rain_in')} 1h ({precip_prob}%)"
+                        else:
+                            text = f"{self.t('rain_in')} 1h"
                     else:
-                        text = f"{self.t('rain_in')} {hours_until}h"
-                    print(f"   ✅ PRONAĐENA KIŠA: {time_str} (za {hours_until}h, rain={rain_val:.2f}mm)")
+                        if precip_prob > 0:
+                            text = f"{self.t('rain_in')} {hours_until}h ({precip_prob}%)"
+                        else:
+                            text = f"{self.t('rain_in')} {hours_until}h"
+                    print(f"   ✅ PRONAĐENA KIŠA: {time_str} (za {hours_until}h, prob={precip_prob}%, rain={rain_val:.2f}mm)")
                     self.precip_alert_label.setText(f"🌧️ {text}")
                     return
-                    
-                elif (rain_val > 0 or precip_val > 0) and code in [71, 73, 75, 77, 85, 86]:
+                
+                # Sneg: relaksiran code check za visoke verovatnoće
+                elif has_rain_risk and ((code in [71, 73, 75, 77, 85, 86]) or (precip_prob > 50)):
                     if hours_until == 1:
-                        text = f"{self.t('snow_in')} 1h"
+                        if precip_prob > 0:
+                            text = f"{self.t('snow_in')} 1h ({precip_prob}%)"
+                        else:
+                            text = f"{self.t('snow_in')} 1h"
                     else:
-                        text = f"{self.t('snow_in')} {hours_until}h"
-                    print(f"   ✅ PRONAĐEN SNEG: {time_str} (za {hours_until}h, precip={precip_val:.2f}mm)")
+                        if precip_prob > 0:
+                            text = f"{self.t('snow_in')} {hours_until}h ({precip_prob}%)"
+                        else:
+                            text = f"{self.t('snow_in')} {hours_until}h"
+                    print(f"   ✅ PRONAĐEN SNEG: {time_str} (za {hours_until}h, prob={precip_prob}%, precip={precip_val:.2f}mm)")
                     self.precip_alert_label.setText(f"❄️ {text}")
                     return
-                    
-                elif (rain_val > 0 or precip_val > 0) and code in [95, 96, 99]:
+                
+                # Oluja: relaksiran code check za visoke verovatnoće
+                elif has_rain_risk and ((code in [95, 96, 99]) or (precip_prob > 70)):
                     if hours_until == 1:
-                        text = f"{self.t('storm_in')} 1h"
+                        if precip_prob > 0:
+                            text = f"{self.t('storm_in')} 1h ({precip_prob}%)"
+                        else:
+                            text = f"{self.t('storm_in')} 1h"
                     else:
-                        text = f"{self.t('storm_in')} {hours_until}h"
-                    print(f"   ✅ PRONAĐENA OLUJA: {time_str} (za {hours_until}h, rain={rain_val:.2f}mm)")
+                        if precip_prob > 0:
+                            text = f"{self.t('storm_in')} {hours_until}h ({precip_prob}%)"
+                        else:
+                            text = f"{self.t('storm_in')} {hours_until}h"
+                    print(f"   ✅ PRONAĐENA OLUJA: {time_str} (za {hours_until}h, prob={precip_prob}%, rain={rain_val:.2f}mm)")
                     self.precip_alert_label.setText(f"⛈️ {text}")
                     return
             
             self.precip_alert_label.setText(f"☀️ {self.t('no_precipitation')}")
+            
             
         except Exception as e:
             print(f"❌ Rain alert greška: {e}")
@@ -2775,11 +3208,21 @@ class WeatherWidget(QMainWindow):
                 temp = next_hour['temp']
                 icon = next_hour['icon']
                 precip = next_hour['precip_prob']
+                code = next_hour['weather_code']  # ✅ Uzmi weather_code
+                
+                # ✅ Odredi tip padavine na osnovu weather_code
+                snow_codes = [71, 73, 75, 77, 85, 86]
+                
+                if code in snow_codes:
+                    # SNEG!
+                    precip_label = "snow" if self.current_language == "en" else "sneg"
+                else:
+                    # KIŠA (default)
+                    precip_label = "rain" if self.current_language == "en" else "kiša"
                 
                 # Tekst za label - kompaktan prikaz
-                rain_label = "rain" if self.current_language == "en" else "kiša"
                 if precip > 50:
-                    label_text = f"{time_str}: {icon} {temp}°C ({rain_label} {precip}%)"
+                    label_text = f"{time_str}: {icon} {temp}°C ({precip_label} {precip}%)"
                 else:
                     label_text = f"{time_str}: {icon} {temp}°C"
                 
