@@ -300,6 +300,10 @@ If you see "Windows Location nije dostupan" / "Windows Location Not Available":
 ### Tray Menu
 ![Tray Menu](screenshots/tray_menu.png)
 
+### 📍 Location Menu
+
+![Location Menu - English](screenshots/location_menu_english.png)
+![Location Menu - Serbian](screenshots/location_menu_serbian.png)
 ---
 
 ## 🔧 Requirements
