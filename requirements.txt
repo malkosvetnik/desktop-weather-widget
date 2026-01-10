@@ -1,2 +1,6 @@
+# Weather Widget Dependencies
+# Python 3.8+ required
+
 PyQt5>=5.15.0
 requests>=2.25.0
+geocoder>=1.38.1

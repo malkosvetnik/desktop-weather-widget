@@ -5,6 +5,7 @@ import os
 import re
 import socket
 import time
+import winreg
 from datetime import datetime
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QLabel, QPushButton, QSystemTrayIcon,
@@ -68,6 +69,9 @@ class WeatherWidget(QMainWindow):
         self.hourly_forecast_data = []  # ✅ Za tooltip satne prognoze
         self.full_alert_text = ""  # ✅ Pun tekst upozorenja za tooltip
         self.current_language = "en"  # ✅ Default jezik: English (will be loaded from settings)
+        self.location_source = self.settings.value('location_source', 'api', type=str)  # ✅ 'api' ili 'windows'
+        # ✅ Prevent repeated popups if Windows Location is turned off while widget is running
+        self._windows_location_warning_shown = False
         
         # ✅ Translation dictionary
         self.translations = {
@@ -194,6 +198,9 @@ class WeatherWidget(QMainWindow):
                 "tray_click_through": "Click-Through Mode",
                 "tray_resolution": "Rezolucija Monitora",
                 "tray_refresh": "Osveži Vreme",
+                "tray_location_source": "📍 Izvor Lokacije",
+                "location_api": "API Lokacija",
+                "location_windows": "Windows Lokacija",
                 "tray_exit": "Izađi",
                 
                 # Startup notifications
@@ -336,6 +343,9 @@ class WeatherWidget(QMainWindow):
                 "tray_click_through": "Click-Through Mode",
                 "tray_resolution": "Monitor Resolution",
                 "tray_refresh": "Refresh Weather",
+                "tray_location_source": "📍 Location Source",
+                "location_api": "API Location",
+                "location_windows": "Windows Location",
                 "tray_exit": "Exit",
                 
                 # Startup notifications
@@ -1270,7 +1280,12 @@ class WeatherWidget(QMainWindow):
 
     def getWindDirection(self, degrees):
         """Pretvori stepene u pravac vetra (N, NE, E, SE, S, SW, W, NW)"""
-        directions = ['S', 'SI', 'I', 'JI', 'J', 'JZ', 'Z', 'SZ']
+        # Dvojezični pravci vetra (Serbian / English)
+        if self.current_language == "sr":
+            directions = ['S', 'SI', 'I', 'JI', 'J', 'JZ', 'Z', 'SZ']
+        else:  # English
+            directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+        
         index = round(degrees / 45) % 8
         return directions[index]
 
@@ -1947,6 +1962,26 @@ class WeatherWidget(QMainWindow):
         # Postavi default (srpski)
         self.language_actions[self.current_language].setChecked(True)
 
+        # ✅ NOVI: Location Source selector submenu
+        self.location_source_menu = QMenu("📍 Izvor Lokacije", self)
+        
+        self.location_api_action = QAction("API Lokacija", self)
+        self.location_api_action.setCheckable(True)
+        self.location_api_action.triggered.connect(lambda: self.set_location_source('api'))
+        
+        self.location_windows_action = QAction("Windows Lokacija", self)
+        self.location_windows_action.setCheckable(True)
+        self.location_windows_action.triggered.connect(lambda: self.set_location_source('windows'))
+        
+        # Postavi default (API)
+        if self.location_source == 'api':
+            self.location_api_action.setChecked(True)
+        else:
+            self.location_windows_action.setChecked(True)
+        
+        self.location_source_menu.addAction(self.location_api_action)
+        self.location_source_menu.addAction(self.location_windows_action)
+
         self.update_action = QAction("Osveži Vreme", self)
         self.update_action.triggered.connect(self.updateWeather)
 
@@ -1961,6 +1996,7 @@ class WeatherWidget(QMainWindow):
         tray_menu.addAction(self.click_through_action)
         tray_menu.addMenu(self.size_menu)
         tray_menu.addMenu(self.language_menu)  # ✅ DODATO: Language menu
+        tray_menu.addMenu(self.location_source_menu)  # ✅ DODATO: Location Source menu
         tray_menu.addSeparator()
         tray_menu.addAction(self.update_action)
         tray_menu.addAction(self.quit_action)
@@ -2275,6 +2311,9 @@ class WeatherWidget(QMainWindow):
             self.widget_only_action.setText(self.t("tray_widget_only"))
             self.click_through_action.setText(self.t("tray_click_through"))
             self.size_menu.setTitle(self.t("tray_resolution"))
+            self.location_source_menu.setTitle(self.t("tray_location_source"))
+            self.location_api_action.setText(self.t("location_api"))
+            self.location_windows_action.setText(self.t("location_windows"))
             self.update_action.setText(self.t("tray_refresh"))
             self.quit_action.setText(self.t("tray_exit"))
             
@@ -2305,6 +2344,196 @@ class WeatherWidget(QMainWindow):
             print(f"❌ Greška u updateLanguageUI: {e}")
             import traceback
             traceback.print_exc()
+
+    # ==============================
+    # ✅ WINDOWS LOCATION FUNCTIONS
+    # ==============================
+    
+    def check_windows_location_enabled(self):
+        """Proveri da li je Windows Location servis uključen"""
+        try:
+            # ✅ Windows Location može biti blokiran globalno (HKLM) ili po-korisniku (HKCU).
+            # Proveravamo oba da bismo pouzdano detektovali kada je Location Services ugašen.
+            key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location"
+
+            def _read_value(root):
+                try:
+                    k = winreg.OpenKey(root, key_path)
+                    v, _ = winreg.QueryValueEx(k, "Value")
+                    winreg.CloseKey(k)
+                    return str(v)
+                except Exception:
+                    return None
+
+            v_lm = _read_value(winreg.HKEY_LOCAL_MACHINE)
+            v_cu = _read_value(winreg.HKEY_CURRENT_USER)
+
+            # Ako je globalno Deny, tretiramo kao OFF bez obzira na HKCU
+            if v_lm and v_lm.lower() == "deny":
+                return False
+
+            # Ako HKCU postoji i Deny -> OFF
+            if v_cu and v_cu.lower() == "deny":
+                return False
+
+            # Ako imamo barem jedan Allow, tretiramo kao ON
+            if (v_lm and v_lm.lower() == "allow") or (v_cu and v_cu.lower() == "allow"):
+                return True
+
+            # Ako ne možemo da pročitamo ili nema vrednosti, ponašamo se konzervativno
+            return False
+        except Exception as e:
+            print(f"❌ Greška pri proveri Location servisa: {e}")
+            return False
+
+    def show_windows_location_disabled_popup(self):
+        """Prikaži uputstvo (SR/EN) kako da se uključi Windows Location."""
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Warning)
+        msg.setStandardButtons(QMessageBox.Ok)
+
+        if self.current_language == "sr":
+            msg.setWindowTitle("Windows lokacija nije uključena")
+            msg.setText("⚠️ Windows lokacija (Location services) je isključena!")
+            msg.setInformativeText(
+                "<b>Ako želiš da koristiš Windows lokaciju u widgetu:</b><br><br>"
+                "1) Otvori <b>Podešavanja</b> (⊞ Win + I)<br>"
+                "2) Idi na <b>Privatnost i bezbednost → Lokacija</b><br>"
+                "3) Uključi <b>Usluge lokacije</b> (Location services)<br>"
+                "4) Uključi i <b>Dozvoli aplikacijama pristup lokaciji</b><br><br>"
+                "<i>Napomena: Nekad je potreban restart widgeta nakon promene.</i>"
+            )
+        else:
+            msg.setWindowTitle("Windows Location Not Enabled")
+            msg.setText("⚠️ Windows Location (Location services) is turned off!")
+            msg.setInformativeText(
+                "<b>If you want the widget to use Windows Location:</b><br><br>"
+                "1) Open <b>Settings</b> (⊞ Win + I)<br>"
+                "2) Go to <b>Privacy & Security → Location</b><br>"
+                "3) Turn on <b>Location services</b><br>"
+                "4) Enable <b>Let apps access your location</b><br><br>"
+                "<i>Note: A widget restart may be required after changing this.</i>"
+            )
+
+        msg.exec_()
+
+    def get_windows_location(self):
+        """Dobij lokaciju iz Windows Location API-ja koristeći geocoder"""
+        try:
+            import geocoder
+            
+            print("🔍 Pokušavam da dobijem Windows Location (bez IP fallback-a)...")
+            
+            # ✅ POKUŠAJ SAMO Windows Location (bez IP fallback-a)
+            # Ako korisnik izabere Windows Location, želimo PRAVU Windows lokaciju, ne IP
+            try:
+                g = geocoder.windows('me')
+                
+                if g.ok and g.latlng:
+                    lat = g.latlng[0]
+                    lon = g.latlng[1]
+                    
+                    print(f"✅ Windows Location uspešno: ({lat:.4f}, {lon:.4f})")
+                    
+                    # Dobij naziv grada preko Reverse Geocoding
+                    city_name = self.get_city_from_coords(lat, lon)
+                    
+                    return lat, lon, city_name
+                else:
+                    print(f"❌ Windows Location nije vratio validne koordinate")
+                    print(f"   g.ok = {g.ok}")
+                    print(f"   g.latlng = {g.latlng if hasattr(g, 'latlng') else 'N/A'}")
+                    return None, None, None
+                    
+            except AttributeError as e:
+                # geocoder.windows() ne postoji
+                print(f"⚠️ geocoder.windows() metod ne postoji: {e}")
+                print("   Koristim IP geolocation kao alternativu...")
+                
+                # Fallback na IP geolocation (ali prijaviti ćemo korisniku)
+                g = geocoder.ip('me')
+                
+                if g.ok and g.latlng:
+                    lat = g.latlng[0]
+                    lon = g.latlng[1]
+                    
+                    print(f"⚠️ Koristim IP location umesto Windows Location: ({lat:.4f}, {lon:.4f})")
+                    
+                    # Dobij naziv grada preko Reverse Geocoding
+                    city_name = self.get_city_from_coords(lat, lon)
+                    
+                    # Označi da je ovo zapravo IP location, ne Windows Location
+                    return lat, lon, city_name
+                else:
+                    return None, None, None
+                    
+            except Exception as e:
+                print(f"❌ Windows Location greška: {e}")
+                return None, None, None
+                
+        except ImportError:
+            print("❌ 'geocoder' biblioteka nije instalirana. Instaliraj sa: pip install geocoder")
+            return None, None, None
+        except Exception as e:
+            print(f"❌ Opšta greška u get_windows_location: {e}")
+            import traceback
+            traceback.print_exc()
+            return None, None, None
+
+    def get_city_from_coords(self, lat, lon):
+        """Reverse geocoding - dobij ime grada iz koordinata"""
+        try:
+            # ✅ UVEK koristi engleski (accept-language=en) da bi dobio latinicu
+            # normalizeCityName() će kasnije primeniti pravilnu lokalizaciju
+            url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&accept-language=en"
+            headers = {'User-Agent': 'WeatherWidget/2.0'}
+            response = self.session.get(url, headers=headers, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                address = data.get('address', {})
+                city = address.get('city') or address.get('town') or address.get('village', 'Unknown')
+                
+                # ✅ KONVERZIJA IZ ĆIRILICE U LATINICU (ako API vrati ćirilicu)
+                if self.is_cyrillic(city):
+                    original_name = city
+                    city = self.cyrillic_to_latin(city)
+                    print(f"🔤 Konvertovano: {original_name} -> {city}")
+                
+                return city
+        except Exception as e:
+            print(f"❌ Reverse geocoding greška: {e}")
+        return "Unknown Location"
+
+    def set_location_source(self, source):
+        """Promeni izvor lokacije (api ili windows)"""
+        if source == 'windows':
+            # Proveri da li je Windows Location uključen
+            if not self.check_windows_location_enabled():
+                self.show_windows_location_disabled_popup()
+                
+                # Ostavi na API opciji
+                self.location_api_action.setChecked(True)
+                self.location_windows_action.setChecked(False)
+                return
+        
+        # Sačuvaj izbor
+        self.location_source = source
+        self.settings.setValue('location_source', source)
+        
+        # Ažuriraj checkmarks
+        self.location_api_action.setChecked(source == 'api')
+        self.location_windows_action.setChecked(source == 'windows')
+        
+        # Ažuriraj tekst menu akcija prema jeziku
+        self.location_source_menu.setTitle(self.t("tray_location_source"))
+        self.location_api_action.setText(self.t("location_api"))
+        self.location_windows_action.setText(self.t("location_windows"))
+        
+        # Osveži vreme sa novim izvorom
+        self.updateWeather()
+        
+        source_text = "Windows Location" if source == "windows" else "API Location"
+        print(f"✅ Location source promenjen na: {source_text}")
 
     def toggleStartup(self):
         import winreg
@@ -2507,6 +2736,14 @@ class WeatherWidget(QMainWindow):
             "subotica": "Subotica",
             "zaječar": "Zaječar" if self.current_language == "sr" else "Zajecar",
             "zajecar": "Zaječar" if self.current_language == "sr" else "Zajecar",
+            "zaje\u010dar": "Zaječar" if self.current_language == "sr" else "Zajecar",  # Unicode č
+            "leskovac": "Leskovac",
+            "čačak": "Čačak" if self.current_language == "sr" else "Cacak",
+            "cacak": "Čačak" if self.current_language == "sr" else "Cacak",
+            "smederevo": "Smederevo",
+            "novi pazar": "Novi Pazar",
+            "pancevo": "Pančevo" if self.current_language == "sr" else "Pancevo",
+            "pančevo": "Pančevo" if self.current_language == "sr" else "Pancevo",
         }
         
         # Try lowercase lookup first
@@ -2626,22 +2863,81 @@ class WeatherWidget(QMainWindow):
         try:
             location_data = None
 
-            if self.use_auto_location:
-                location_data = self.getAutoLocation()
-                if location_data:
-                    self.current_location = location_data['city']
+            # ✅ NOVI: Proveri izvor lokacije
+            if self.location_source == 'windows':
+                # ✅ Ako je Windows Location ugašen (npr. korisnik ga isključi u Settings),
+                # prikaži uputstvo na izabranom jeziku i prebaci na API fallback.
+                if not self.check_windows_location_enabled():
+                    if not getattr(self, '_windows_location_warning_shown', False):
+                        self.show_windows_location_disabled_popup()
+                        self._windows_location_warning_shown = True
+
+                    # Prebaci na API source da widget nastavi da radi
+                    self.location_source = 'api'
+                    self.settings.setValue('location_source', 'api')
+                    try:
+                        self.location_api_action.setChecked(True)
+                        self.location_windows_action.setChecked(False)
+                    except Exception:
+                        pass
+
+                    # Nastavi sa API logikom ispod
+                else:
+                    # Ako je uključeno, resetuj flag da sledeći put opet može da upozori
+                    self._windows_location_warning_shown = False
+
+                # Koristi Windows Location (samo ako je i dalje izabrano)
+                lat = lon = city = None
+                if self.location_source == 'windows':
+                    lat, lon, city = self.get_windows_location()
+                
+                if lat is None or lon is None:
+                    print("❌ Ne mogu da dobijem Windows lokaciju, prelazim na API fallback")
+                    # Fallback na API ako Windows Location ne radi
+                    if self.use_auto_location:
+                        location_data = self.getAutoLocation()
+                        if location_data:
+                            self.current_location = location_data['city']
+                            lat, lon = location_data['lat'], location_data['lon']
+                            city_name = location_data['city']
+                    else:
+                        location_data = self.getCityCoordinates(self.current_location)
+                        if location_data:
+                            lat, lon = location_data['lat'], location_data['lon']
+                            city_name = location_data['city']
+                        else:
+                            self.desc_label.setText(f"❌ Grad '{self.current_location}' nije pronađen")
+                            return
+                else:
+                    # Uspešno dobio Windows lokaciju
+                    city_name = self.normalizeCityName(city)
+                    self.city_label.setText(city_name)
+                    print(f"✅ Windows Location: {city_name} ({lat:.4f}, {lon:.4f})")
+                    
+                    # ✅ KREIRAJ location_data dictionary za Windows Location
+                    location_data = {
+                        'city': city_name,
+                        'lat': lat,
+                        'lon': lon
+                    }
             else:
-                location_data = self.getCityCoordinates(self.current_location)
-                if not location_data:
-                    self.desc_label.setText(f"❌ Grad '{self.current_location}' nije pronađen")
+                # Koristi API Location (default)
+                if self.use_auto_location:
+                    location_data = self.getAutoLocation()
+                    if location_data:
+                        self.current_location = location_data['city']
+                else:
+                    location_data = self.getCityCoordinates(self.current_location)
+                    if not location_data:
+                        self.desc_label.setText(f"❌ Grad '{self.current_location}' nije pronađen")
+                        return
+
+                if not location_data or 'lat' not in location_data:
+                    self.desc_label.setText("❌ Greška pri lociranju")
                     return
 
-            if not location_data or 'lat' not in location_data:
-                self.desc_label.setText("❌ Greška pri lociranju")
-                return
-
-            lat, lon = location_data['lat'], location_data['lon']
-            city_name = location_data['city']
+                lat, lon = location_data['lat'], location_data['lon']
+                city_name = location_data['city']
 
             print(f"🔄 Učitavam vreme za: {city_name}")
 
