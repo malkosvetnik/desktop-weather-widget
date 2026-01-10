@@ -15,9 +15,29 @@ A beautiful, feature-rich desktop weather widget for Windows with **15-minute pr
 
 ---
 
-## 🎊 What's New in v2.1.6
+## 🎊 What's New in v2.1.7
 
-### ⚡ **15-Minute Nowcast** - NEW!
+### 🛰️ **Windows Location API Support** - NEW!
+Accurate location detection using your device's GPS and Wi-Fi triangulation:
+
+- **📍 Dual Location System**: Choose between IP-based (API Location) or GPS/Wi-Fi (Windows Location)
+- **🎯 Precise positioning**: Uses the same location API as Windows apps - no more wrong city from IP!
+- **🔄 Easy switching**: Toggle via tray menu "Location Source"
+- **⚠️ Smart detection**: Automatically detects if Location services are disabled
+- **📋 Helpful guidance**: Bilingual setup instructions when needed
+- **✅ Automatic fallback**: Falls back to API Location if Windows Location unavailable
+
+**Example accuracy:**
+```
+API Location (IP):      Belgrade (±20km from ISP location)
+Windows Location:       Novi Beograd, exact coordinates
+```
+
+---
+
+## 🎊 Previous Updates
+
+### v2.1.6 - 15-Minute Nowcast
 The game-changer feature that sets this widget apart:
 
 - **🎯 Radar-like precision**: See rain coming 15, 30, 45 minutes ahead
@@ -42,6 +62,13 @@ Intelligently prioritizes weather data:
 ---
 
 ## ✨ Features
+
+### 📍 Location Services
+- **🆕 Windows Location API**: GPS/Wi-Fi triangulation for accurate positioning
+- **Dual location system**: Choose between API (IP-based) or Windows Location (GPS/Wi-Fi)
+- **Auto-location** or manual city selection
+- **Smart fallback**: Automatic switch if Windows Location unavailable
+- **Setup guidance**: Bilingual instructions for enabling Location services
 
 ### 🌡️ Current Weather
 - Real-time temperature and "feels like" temperature
@@ -118,6 +145,7 @@ No Python installation required - just download and run!
 ### Tray Menu
 Right-click the tray icon for:
 - Show/Hide widget
+- **📍 Location Source**: Switch between API Location (IP) and Windows Location (GPS/Wi-Fi)
 - Enable/disable startup with Windows
 - Widget-only mode (no tray icon)
 - Click-through mode
@@ -133,7 +161,82 @@ Right-click the tray icon for:
 
 ---
 
+## 📍 Location Sources
+
+### 📡 API Location (Default)
+- Uses your IP address for location
+- Quick and simple, no setup required
+- City-level accuracy (~10-50 km)
+- Works immediately on any device
+
+### 🛰️ Windows Location (Accurate & Precise)
+- Uses GPS/Wi-Fi triangulation
+- **Much more accurate** than IP-based location (~50-500 m)
+- Shows your exact neighborhood/district
+- Requires Windows Location services enabled
+
+#### How to Enable Windows Location:
+
+**Step 1: Enable in Widget**
+1. Right-click tray icon → **"📍 Izvor Lokacije"** / **"📍 Location Source"**
+2. Select **"Windows Lokacija (GPS/Wi-Fi)"** / **"Windows Location (GPS/Wi-Fi)"**
+
+**Step 2: If Dialog Appears**
+If you see "Windows Location nije dostupan" / "Windows Location Not Available":
+
+1. Open **Settings** (⊞ Win + I)
+2. Go to **Privacy & Security** → **Location**
+3. Turn ON all 3 options:
+   - ✅ **Location services**
+   - ✅ **Let apps access your location**
+   - ✅ **Let desktop apps access your location**
+4. **Restart your computer** (important!)
+5. Try Windows Location again in widget
+
+**Step 3: Verify**
+- Widget should now show your precise location
+- First use may take 10-30 seconds (Wi-Fi scan)
+- Subsequent uses: 1-5 seconds
+
+#### Requirements for Windows Location:
+- ✅ Windows 10/11
+- ✅ Wi-Fi adapter (for triangulation)
+- ✅ Location services enabled
+- ✅ Computer restart after enabling
+
+**Note:** Desktop PCs without Wi-Fi adapter cannot use Windows Location. Laptops work perfectly!
+
+---
+
 ## 🆕 What's New - Version History
+
+### v2.1.7 (January 10, 2026) - WINDOWS LOCATION UPDATE 🛰️
+
+#### 🚀 New Features
+- **Windows Location API support** - GPS/Wi-Fi positioning for accurate location
+- **Dual location system** - Easy switching between API (IP) and Windows Location
+- **Smart detection** - Detects when Location services are disabled
+- **Bilingual setup guides** - Step-by-step instructions in Serbian and English
+- **Automatic fallback** - Gracefully falls back to API Location if needed
+- **Registry validation** - Checks Windows Location service status
+
+#### 🛠️ Bug Fixes
+- Fixed city name localization (Cyrillic → Latin conversion)
+- Fixed wind direction translation (SR: JI → EN: SE)
+- Fixed location_data dictionary for Windows Location path
+- Fixed silent fallback behavior when Location disabled
+- Improved error handling for location services
+
+#### 📊 Location Accuracy Comparison
+
+| Device Type | API Location (IP) | Windows Location |
+|-------------|-------------------|------------------|
+| Desktop without Wi-Fi | ✅ Works (ISP location) | ❌ Unavailable |
+| Desktop with Wi-Fi | ✅ Works (±20km) | ✅ Works (±0.5km) |
+| Laptop | ✅ Works (±20km) | ✅ Works (±0.1km) |
+| Accuracy | City-level | Street-level |
+
+---
 
 ### v2.1.6 (January 9, 2026) - NOWCAST UPDATE 🎊
 
@@ -204,6 +307,7 @@ Right-click the tray icon for:
 - **Python**: 3.8 or higher
 - **PyQt5**: 5.15+
 - **requests**: 2.25+
+- **geocoder**: 1.38+ (for Windows Location support)
 - **No API key required!** (uses free Open-Meteo API)
 
 ---
@@ -266,6 +370,26 @@ python weather_widget.pyw
 ---
 
 ## 🐛 Known Issues & Troubleshooting
+
+### Windows Location not working
+**Symptoms**: Dialog appears "Windows Location nije dostupan" / "Windows Location Not Available"
+
+**Solutions**:
+1. **Enable Location Services**:
+   - Open Settings (⊞ Win + I)
+   - Go to Privacy & Security → Location
+   - Turn ON all 3 options
+   
+2. **Restart Computer** (very important!)
+   - Location permissions only take effect after restart
+
+3. **Check Wi-Fi adapter**:
+   - Desktop PCs without Wi-Fi cannot use Windows Location
+   - Use API Location instead
+
+4. **Try manual city search**:
+   - Click 📍 Auto button → Enter city name
+   - Works without location services
 
 ### Widget doesn't refresh after sleep
 - Solution: Widget has built-in 30s delay after wake - this is intentional to wait for network

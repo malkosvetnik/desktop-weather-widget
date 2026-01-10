@@ -7,6 +7,123 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v2.1.7] - 2026-01-10
+
+### 🛰️ WINDOWS LOCATION UPDATE - Major Feature Release
+
+#### ✨ New Features
+
+##### Dual Location System
+- **Windows Location API integration**: Use GPS/Wi-Fi triangulation for accurate positioning
+- **Location Source selector**: Easy switching via tray menu between:
+  - 📡 API Location (IP-based) - Default, works everywhere, city-level accuracy
+  - 🛰️ Windows Location (GPS/Wi-Fi) - Accurate street-level positioning
+- **Smart detection**: Automatically checks if Windows Location services are enabled
+- **Bilingual setup guides**: Step-by-step instructions in Serbian and English
+- **Graceful fallback**: Automatically switches to API Location if Windows Location unavailable
+- **Registry validation**: Checks Windows Location service status before attempting connection
+
+##### Location Detection Intelligence
+- **Automatic city normalization**: Converts Cyrillic city names to Latin for API compatibility
+- **Reverse geocoding**: Translates GPS coordinates to city names using Nominatim
+- **Multi-service support**: Falls back between location providers seamlessly
+- **Error notifications**: Clear dialogs when Location services need setup
+- **Persistent preferences**: Remembers your location source choice between sessions
+
+#### 🛠️ Bug Fixes
+
+##### Location Handling
+- Fixed: AttributeError when switching location sources
+- Fixed: Cyrillic city name conversion (Зајечар → Zaječar, Ниш → Niš)
+- Fixed: Missing location_data dictionary for Windows Location code path
+- Fixed: Wind direction translation discrepancy (SR: "JI" ↔ EN: "SE")
+- Fixed: Silent fallback behavior - now shows notification when Location disabled
+
+##### User Experience
+- Fixed: Menu labels now clearly distinguish between location sources
+- Fixed: Dialogs properly appear when Windows Location fails (not silent anymore)
+- Fixed: Check mark synchronization with actual active location source
+- Fixed: Location preference persistence between application restarts
+
+#### 🔧 Technical Improvements
+
+##### Code Architecture
+```python
+# OLD (v2.1.6):
+location_data = get_ip_location()  # Always IP-based
+
+# NEW (v2.1.7):
+if location_source == 'windows':
+    location_data = get_windows_location()  # Try GPS/Wi-Fi first
+    if location_data is None:
+        show_setup_dialog()  # Notify user with instructions
+        location_data = get_ip_location()  # Fallback to IP
+else:
+    location_data = get_ip_location()  # Use IP if selected
+```
+
+##### Enhanced Error Handling
+- Registry checks with proper error messages
+- Network timeout handling for geocoding API calls
+- Graceful degradation when services unavailable
+- User-friendly error dialogs with actionable solutions
+
+##### Menu System Updates
+- Updated labels: "API Lokacija (IP)" and "Windows Lokacija (GPS/Wi-Fi)"
+- Clear visual distinction between location sources in menu
+- Checkmarks properly indicate which source is active
+- Bilingual support for all menu items and dialogs
+
+#### 📊 Location Accuracy Comparison
+
+| Scenario | API Location (IP) | Windows Location (GPS/Wi-Fi) |
+|----------|-------------------|------------------------------|
+| Desktop without Wi-Fi | ✅ Works (ISP location, ±20km) | ❌ Unavailable |
+| Desktop with Wi-Fi | ✅ Works (ISP location, ±20km) | ✅ Works (Accurate, ±0.5km) |
+| Laptop with Wi-Fi | ✅ Works (ISP location, ±20km) | ✅ Works (Very accurate, ±0.1km) |
+| Setup required | ❌ None | ✅ Windows Location ON + Restart |
+| First-time delay | Instant | 10-30 seconds (Wi-Fi scan) |
+| Subsequent calls | Instant | 1-5 seconds (cached) |
+
+#### ⚙️ System Requirements
+
+**For Windows Location:**
+- Windows 10/11 with Location services
+- Wi-Fi adapter (required for triangulation)
+- Location services enabled in Windows Settings
+- Desktop apps permission granted
+- **Computer restart after enabling** (Windows requirement)
+
+**Dependencies Updated:**
+```
+PyQt5>=5.15.0
+requests>=2.25.0
+geocoder>=1.38.1  # NEW! For Windows Location API
+```
+
+#### ⚠️ Known Limitations
+- Desktop PCs without Wi-Fi adapter cannot use Windows Location (hardware limitation)
+- Requires computer restart after enabling Location services (Windows policy)
+- First-time Location access may take 10-30 seconds for Wi-Fi scanning
+- Some regions may have limited Wi-Fi database coverage
+- Minutely weather forecasts may not be available in all regions (falls back to hourly)
+
+#### 💡 Use Cases
+
+**When to use API Location (IP):**
+- Desktop PC without Wi-Fi
+- Quick setup without restart
+- City-level accuracy sufficient
+- Privacy-conscious users
+
+**When to use Windows Location (GPS/Wi-Fi):**
+- Need precise, neighborhood-level weather
+- Laptop or PC with Wi-Fi adapter
+- Don't mind one-time setup + restart
+- Want street-level accuracy
+
+---
+
 ## [v2.1.6] - 2026-01-09
 
 ### 🎊 NOWCAST UPDATE - Major Feature Release
