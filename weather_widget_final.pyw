@@ -659,17 +659,17 @@ class WeatherWidget(QMainWindow):
         # Sat
         self.clock_label = QLabel("00:00:00")
         self.clock_label.setStyleSheet("color: white; font-size: 28px; font-weight: bold; background: transparent;")
-        self.clock_label.setAlignment(Qt.AlignCenter)
+        self.clock_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)  # ✅ Dodato vertikalno centriranje
         self.clock_label.setAttribute(Qt.WA_TransparentForMouseEvents)
-        clock_battery_layout.addWidget(self.clock_label)
+        clock_battery_layout.addWidget(self.clock_label, alignment=Qt.AlignVCenter)  # ✅ Layout alignment
         
         # Battery status (prikazuje se samo na laptopu)
         self.battery_label = QLabel("")
         self.battery_label.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 14px; background: transparent;")
-        self.battery_label.setAlignment(Qt.AlignLeft)
+        self.battery_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)  # ✅ Dodato vertikalno centriranje
         self.battery_label.setAttribute(Qt.WA_TransparentForMouseEvents)
         self.battery_label.hide()  # Sakrij dok ne proverimo da li je laptop
-        clock_battery_layout.addWidget(self.battery_label)
+        clock_battery_layout.addWidget(self.battery_label, alignment=Qt.AlignVCenter)  # ✅ Layout alignment
         
         # Spacer desno da održi balans
         clock_battery_layout.addStretch()
