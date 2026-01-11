@@ -1,9 +1,13 @@
 # 🌤️ Desktop Weather Widget (Windows)
 
 A lightweight, accurate, and customizable **desktop weather widget for Windows**.  
-Designed for users who want **precise forecasts, full control, and privacy** — without heavy frameworks like Rainmeter.
+Built for users who want **precise short-term forecasts, reliability, and low system overhead** — without heavy frameworks like Rainmeter.
 
-![Main Widget](screenshots/main_widget_serbian.png)
+![Widget Preview](screenshots/main_widget_serbian.png)
+
+[![Latest Release](https://img.shields.io/github/v/release/malkosvetnik/desktop-weather-widget?label=latest%20version)](https://github.com/malkosvetnik/desktop-weather-widget/releases)
+[![Stars](https://img.shields.io/github/stars/malkosvetnik/desktop-weather-widget?style=social)](https://github.com/malkosvetnik/desktop-weather-widget/stargazers)
+[![License](https://img.shields.io/github/license/malkosvetnik/desktop-weather-widget)](LICENSE)
 
 ---
 
@@ -11,11 +15,11 @@ Designed for users who want **precise forecasts, full control, and privacy** —
 
 👉 **[Download Windows EXE (ZIP – ~39 MB)](https://drive.google.com/file/d/1vexOriXVtBnVKlCsZ3aeeIHiNb0HAnIz/view?usp=drive_link)**
 
-- Ready-to-run **`.exe` included**
-- **No Python installation required**
-- Just extract and double-click
+- ✅ Ready-to-run **`.exe` included**
+- ❌ **No Python installation required**
+- 📦 Just extract and double-click
 
-> ℹ️ GitHub release assets are size-limited, so the EXE is currently hosted on Google Drive.
+> ℹ️ GitHub release assets are size-limited, so the compiled EXE is currently hosted on Google Drive.
 
 ---
 
@@ -25,8 +29,9 @@ Designed for users who want **precise forecasts, full control, and privacy** —
 - **Celsius / Fahrenheit temperature units**
 - **Optional battery percentage** (laptops only)
 - Improved **15-minute precipitation nowcasting**
-- Better error handling and auto-recovery
-- Full **Serbian / English** interface
+- Better error handling and automatic recovery
+- More robust connection health checks
+- Full **Serbian (Latin) / English** interface
 
 > Several features were added directly based on user feedback.
 
@@ -34,16 +39,29 @@ Designed for users who want **precise forecasts, full control, and privacy** —
 
 ## 🌦️ Key Features
 
-- **15-minute nowcast** for short-term rain & snow
-- Real-time precipitation alerts
-- Dual location system:
-  - IP-based (works everywhere)
-  - Windows Location API (GPS / Wi-Fi, when enabled)
-- Temperature, feels-like, wind, pressure, humidity
-- UV index and detailed **Air Quality (PM2.5, PM10, O₃, NO₂, SO₂, CO)**
-- Desktop-first UX with tray integration
+### ⏱️ High-Precision Weather
+- **15-minute nowcast** for short-term rain and snow
+- Real-time alerts (e.g. *“Rain in 15 min (70%)”*)
+- Powered by **Open-Meteo** (free, no API key)
+
+### 📍 Dual Location System
+- **IP-based geolocation** (works everywhere)
+- **Windows Location API** (GPS / Wi-Fi, when enabled)
+- Automatic fallback and easy switching
+
+### 📊 Comprehensive Data
+- Temperature and “feels like”
+- Wind speed & direction
+- Pressure, humidity, visibility
+- UV index (color-coded)
+- **Air Quality Index** (PM2.5, PM10, O₃, NO₂, SO₂, CO)
+
+### 🖥️ Desktop-First Experience
+- Always-on-top desktop widget
+- Tray integration
 - Auto-start with Windows
-- Click-through & position lock modes
+- Click-through & position lock
+- Sleep / wake auto-recovery
 
 ---
 
@@ -64,6 +82,8 @@ All menus, tooltips, alerts, and messages are localized.
 ---
 
 ## 🚀 Run from Source (Optional)
+
+For developers who prefer running from source:
 
 ```bash
 git clone https://github.com/malkosvetnik/desktop-weather-widget.git
