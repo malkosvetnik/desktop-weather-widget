@@ -14,6 +14,15 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt5.QtCore import Qt, QTimer, QPoint, QSettings, pyqtSignal
 from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor, QFont, QCursor
 
+# ✅ Import za battery status
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
+    print("⚠️ psutil nije instaliran - battery status neće biti dostupan")
+
+
 
 # Klasa za klikabilni label (za tooltip)
 class ClickableLabel(QLabel):
@@ -69,6 +78,9 @@ class WeatherWidget(QMainWindow):
         self.hourly_forecast_data = []  # ✅ Za tooltip satne prognoze
         self.full_alert_text = ""  # ✅ Pun tekst upozorenja za tooltip
         self.current_language = "en"  # ✅ Default jezik: English (will be loaded from settings)
+        self.temperature_unit = self.settings.value('temperature_unit', 'celsius', type=str)  # ✅ 'celsius' ili 'fahrenheit'
+        self.time_format = self.settings.value('time_format', '24h', type=str)  # ✅ '12h' ili '24h'
+        self.unit_system = self.settings.value('unit_system', 'metric', type=str)  # ✅ 'metric' ili 'imperial'
         self.location_source = self.settings.value('location_source', 'api', type=str)  # ✅ 'api' ili 'windows'
         # ✅ Prevent repeated popups if Windows Location is turned off while widget is running
         self._windows_location_warning_shown = False
@@ -190,6 +202,21 @@ class WeatherWidget(QMainWindow):
                 "aqi_moderate": "Srednji",
                 "aqi_poor": "Loš",
                 "aqi_very_poor": "V. loš",
+                
+                # Temperature units
+                "temperature_unit": "Jedinica temperature:",
+                "celsius": "Celzijus (°C)",
+                "fahrenheit": "Farenhajt (°F)",
+                
+                # Time format
+                "time_format": "Format vremena:",
+                "time_12h": "12-satni (AM/PM)",
+                "time_24h": "24-satni",
+                
+                # Unit system
+                "unit_system": "Sistem merenja:",
+                "metric": "Metrički (km/h, mbar)",
+                "imperial": "Imperijalni (mph, inHg)",
                 
                 # Tray Menu
                 "tray_show": "Prikaži Widget",
@@ -336,6 +363,21 @@ class WeatherWidget(QMainWindow):
                 "aqi_poor": "Poor",
                 "aqi_very_poor": "V. Poor",
                 
+                # Temperature units
+                "temperature_unit": "Temperature Unit:",
+                "celsius": "Celsius (°C)",
+                "fahrenheit": "Fahrenheit (°F)",
+                
+                # Time format
+                "time_format": "Time Format:",
+                "time_12h": "12-hour (AM/PM)",
+                "time_24h": "24-hour",
+                
+                # Unit system
+                "unit_system": "Measurement Units:",
+                "metric": "Metric (km/h, mbar)",
+                "imperial": "Imperial (mph, inHg)",
+                
                 # Tray Menu
                 "tray_show": "Show Widget",
                 "tray_startup": "✓ Run at Windows Startup",
@@ -381,6 +423,12 @@ class WeatherWidget(QMainWindow):
         self.clock_timer = QTimer()
         self.clock_timer.timeout.connect(self.updateClock)
         self.clock_timer.start(1000)
+        
+        # ✅ Timer za battery status (svaki 30 sekundi)
+        if PSUTIL_AVAILABLE:
+            self.battery_timer = QTimer()
+            self.battery_timer.timeout.connect(self.updateBatteryStatus)
+            self.battery_timer.start(30000)  # Update every 30 seconds
 
         self.initUI()
         self.initTray()
@@ -396,6 +444,10 @@ class WeatherWidget(QMainWindow):
         self.restorePosition()
 
         self.updateWeather()
+        
+        # ✅ Inicijalna provera battery statusa
+        if PSUTIL_AVAILABLE:
+            self.updateBatteryStatus()
 
         # Timer za automatsko ažuriranje
         self.timer = QTimer()
@@ -594,12 +646,35 @@ class WeatherWidget(QMainWindow):
         self.city_label.setAttribute(Qt.WA_TransparentForMouseEvents)
         container_layout.addWidget(self.city_label)
 
+        # Sat i Battery status u istom redu - wrapper widget bez okvira
+        clock_battery_widget = QWidget()
+        clock_battery_widget.setStyleSheet("background: transparent; border: none;")
+        clock_battery_layout = QHBoxLayout(clock_battery_widget)
+        clock_battery_layout.setContentsMargins(0, 0, 0, 0)
+        clock_battery_layout.setSpacing(10)
+        
+        # Spacer levo da centrira sat
+        clock_battery_layout.addStretch()
+        
         # Sat
         self.clock_label = QLabel("00:00:00")
-        self.clock_label.setStyleSheet("color: white; font-size: 28px; font-weight: bold;")
+        self.clock_label.setStyleSheet("color: white; font-size: 28px; font-weight: bold; background: transparent;")
         self.clock_label.setAlignment(Qt.AlignCenter)
         self.clock_label.setAttribute(Qt.WA_TransparentForMouseEvents)
-        container_layout.addWidget(self.clock_label)
+        clock_battery_layout.addWidget(self.clock_label)
+        
+        # Battery status (prikazuje se samo na laptopu)
+        self.battery_label = QLabel("")
+        self.battery_label.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 14px; background: transparent;")
+        self.battery_label.setAlignment(Qt.AlignLeft)
+        self.battery_label.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.battery_label.hide()  # Sakrij dok ne proverimo da li je laptop
+        clock_battery_layout.addWidget(self.battery_label)
+        
+        # Spacer desno da održi balans
+        clock_battery_layout.addStretch()
+        
+        container_layout.addWidget(clock_battery_widget)
 
         # Datum
         self.date_label = QLabel(self.format_date_serbian(datetime.now()))
@@ -611,7 +686,8 @@ class WeatherWidget(QMainWindow):
         container_layout.addSpacing(6)
 
         # Temperatura
-        self.temp_label = QLabel("--°C")
+        temp_symbol = self.get_temp_symbol()
+        self.temp_label = QLabel(f"--{temp_symbol}")
         self.temp_label.setStyleSheet("color: white; font-size: 60px; font-weight: bold;")
         self.temp_label.setAlignment(Qt.AlignCenter)
         self.temp_label.setAttribute(Qt.WA_TransparentForMouseEvents)
@@ -646,7 +722,8 @@ class WeatherWidget(QMainWindow):
 
         # Oseća se kao
         feels_box = QVBoxLayout()
-        self.feels_label = QLabel("--°C")
+        temp_symbol = self.get_temp_symbol()
+        self.feels_label = QLabel(f"--{temp_symbol}")
         self.feels_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         self.feels_label.setAlignment(Qt.AlignCenter)
         self.feels_label.setAttribute(Qt.WA_TransparentForMouseEvents)
@@ -1110,6 +1187,8 @@ class WeatherWidget(QMainWindow):
             desc = self.getWeatherDescription(weather_code)[1]  # ✅ Prevedi sada!
             precip_prob = hour_data.get('precip_prob', 0)
             
+            temp_symbol = self.get_temp_symbol()
+            
             # Boja temperature
             if temp > 25:
                 temp_color = "#FF9E80"
@@ -1132,7 +1211,7 @@ class WeatherWidget(QMainWindow):
         <tr>
             <td class="time-col">{time}</td>
             <td class="icon-col" title="{desc}">{weather_icon}</td>
-            <td class="temp-col" style="color: {temp_color};">{temp}°</td>
+            <td class="temp-col" style="color: {temp_color};">{temp}{temp_symbol}</td>
             <td class="rain-col" style="color: {precip_color};">{precip_prob}%</td>
         </tr>
             """
@@ -1180,8 +1259,10 @@ class WeatherWidget(QMainWindow):
         
         # Vreme trajanja (ako postoji)
         if 'start' in alert and 'end' in alert:
-            start_time = datetime.fromtimestamp(alert['start']).strftime('%d.%m. %H:%M')
-            end_time = datetime.fromtimestamp(alert['end']).strftime('%d.%m. %H:%M')
+            start_dt = datetime.fromtimestamp(alert['start'])
+            end_dt = datetime.fromtimestamp(alert['end'])
+            start_time = start_dt.strftime('%d.%m. ') + self.format_time_short(start_dt)
+            end_time = end_dt.strftime('%d.%m. ') + self.format_time_short(end_dt)
             tooltip_text += f"<span style='color: #AAA;'>📅 Trajanje:</span> <span style='color: #90CAF9;'>{start_time} - {end_time}</span><br><br>"
         
         # Opis (ako postoji)
@@ -1357,7 +1438,11 @@ class WeatherWidget(QMainWindow):
 
     def updateClock(self):
         """Ažuriraj sat svake sekunde"""
-        current_time = datetime.now().strftime("%H:%M:%S")
+        current_time_obj = datetime.now()
+        if self.time_format == '12h':
+            current_time = current_time_obj.strftime("%I:%M:%S %p")
+        else:
+            current_time = current_time_obj.strftime("%H:%M:%S")
         self.clock_label.setText(current_time)
 
         # Proveri da li je promenjen datum (prošla ponoć)
@@ -1371,6 +1456,56 @@ class WeatherWidget(QMainWindow):
             self.date_label.setText(self.format_date_serbian(datetime.now()))
             self.updateWeather()  # Osvežava i prognozu za 5 dana
             self._last_date = current_date
+    
+    def updateBatteryStatus(self):
+        """Ažuriraj battery status (samo na laptopu)"""
+        if not PSUTIL_AVAILABLE:
+            return
+        
+        try:
+            battery = psutil.sensors_battery()
+            
+            if battery is None:
+                # Nije laptop - sakrij battery label
+                self.battery_label.hide()
+                return
+            
+            # Jeste laptop - prikaži battery status
+            percent = int(battery.percent)
+            is_charging = battery.power_plugged
+            
+            # Odaberi ikonicu na osnovu procenta i charging statusa
+            if is_charging:
+                icon = "🔌"  # Charging
+            elif percent >= 90:
+                icon = "🔋"  # Full battery
+            elif percent >= 60:
+                icon = "🔋"  # Good battery
+            elif percent >= 30:
+                icon = "🔋"  # Medium battery
+            elif percent >= 15:
+                icon = "🪫"  # Low battery
+            else:
+                icon = "🪫"  # Critical battery
+            
+            # Boja na osnovu procenta
+            if is_charging:
+                color = "#4CAF50"  # Zelena za charging
+            elif percent >= 30:
+                color = "rgba(255, 255, 255, 0.8)"  # Bela
+            elif percent >= 15:
+                color = "#FFC107"  # Narandžasta
+            else:
+                color = "#F44336"  # Crvena
+            
+            # Postavi tekst i boju
+            self.battery_label.setText(f"{icon} {percent}%")
+            self.battery_label.setStyleSheet(f"color: {color}; font-size: 14px;")
+            self.battery_label.show()
+            
+        except Exception as e:
+            print(f"❌ Battery status greška: {e}")
+            self.battery_label.hide()
 
     def checkForSleepWake(self):
         """Detektuje sleep/wake i radi safe refresh sa exponential backoff-om."""
@@ -1512,14 +1647,15 @@ class WeatherWidget(QMainWindow):
                 print(f"❌ Svi pokušaji neuspešni! Network greška: {e}")
                 self.desc_label.setText("❌ Nema konekcije")
                 # ✅ Prikazi bar nešto umesto praznog
-                self.temp_label.setText("--°C")
+                temp_symbol = self.get_temp_symbol()
+                self.temp_label.setText(f"--{temp_symbol}")
                 self.weather_alert_label.setText("⚠️ Nema podataka")
 
             # Last updated / status texts (also translate when language changes)
             try:
                 if hasattr(self, 'last_updated_label'):
                     if getattr(self, '_last_updated_time', None):
-                        self.last_updated_label.setText(self.t("last_updated_fmt").format(self._last_updated_time.strftime("%H:%M")))
+                        self.last_updated_label.setText(self.t("last_updated_fmt").format(self.format_time_short(self._last_updated_time)))
                     else:
                         self.last_updated_label.setText(self.t("last_updated_fmt").format("--:--"))
                 if hasattr(self, 'offline_status_label') and self.offline_status_label.isVisible():
@@ -1543,7 +1679,8 @@ class WeatherWidget(QMainWindow):
                 print(f"❌ Konačna greška nakon {max_attempts} pokušaja")
                 self.desc_label.setText("❌ Greška - osvežite ručno")
                 # ✅ Prikazi bar nešto umesto praznog
-                self.temp_label.setText("--°C")
+                temp_symbol = self.get_temp_symbol()
+                self.temp_label.setText(f"--{temp_symbol}")
                 self.weather_alert_label.setText("⚠️ Nema podataka")
 
     def translate_weather(self, description):
@@ -1962,6 +2099,63 @@ class WeatherWidget(QMainWindow):
         # Postavi default (srpski)
         self.language_actions[self.current_language].setChecked(True)
 
+        # ✅ NOVI: Temperature Unit selector submenu
+        self.temp_unit_menu = QMenu("", self)  # Prazan - biće ažuriran u updateTrayMenuLanguage
+        
+        self.temp_unit_actions = {}
+        temp_units = {
+            "celsius": "Celsius (°C)",
+            "fahrenheit": "Fahrenheit (°F)"
+        }
+        
+        for unit_code, unit_name in temp_units.items():
+            action = QAction(unit_name, self)
+            action.setCheckable(True)
+            action.triggered.connect(lambda checked, code=unit_code: self.changeTemperatureUnit(code))
+            self.temp_unit_actions[unit_code] = action
+            self.temp_unit_menu.addAction(action)
+        
+        # Postavi default (celsius)
+        self.temp_unit_actions[self.temperature_unit].setChecked(True)
+
+        # ✅ NOVI: Time Format selector submenu
+        self.time_format_menu = QMenu("", self)  # Prazan - biće ažuriran u updateTrayMenuLanguage
+        
+        self.time_format_actions = {}
+        time_formats = {
+            "24h": "24-hour (17:30)",
+            "12h": "12-hour (05:30 PM)"
+        }
+        
+        for format_code, format_name in time_formats.items():
+            action = QAction(format_name, self)
+            action.setCheckable(True)
+            action.triggered.connect(lambda checked, code=format_code: self.changeTimeFormat(code))
+            self.time_format_actions[format_code] = action
+            self.time_format_menu.addAction(action)
+        
+        # Postavi default (24h)
+        self.time_format_actions[self.time_format].setChecked(True)
+
+        # ✅ NOVI: Unit System selector submenu
+        self.unit_system_menu = QMenu("", self)  # Prazan - biće ažuriran u updateTrayMenuLanguage
+        
+        self.unit_system_actions = {}
+        unit_systems = {
+            "metric": "Metric (km/h, mbar)",
+            "imperial": "Imperial (mph, inHg)"
+        }
+        
+        for system_code, system_name in unit_systems.items():
+            action = QAction(system_name, self)
+            action.setCheckable(True)
+            action.triggered.connect(lambda checked, code=system_code: self.changeUnitSystem(code))
+            self.unit_system_actions[system_code] = action
+            self.unit_system_menu.addAction(action)
+        
+        # Postavi default (metric)
+        self.unit_system_actions[self.unit_system].setChecked(True)
+
         # ✅ NOVI: Location Source selector submenu
         self.location_source_menu = QMenu("📍 Izvor Lokacije", self)
         
@@ -1996,6 +2190,9 @@ class WeatherWidget(QMainWindow):
         tray_menu.addAction(self.click_through_action)
         tray_menu.addMenu(self.size_menu)
         tray_menu.addMenu(self.language_menu)  # ✅ DODATO: Language menu
+        tray_menu.addMenu(self.temp_unit_menu)  # ✅ DODATO: Temperature Unit menu
+        tray_menu.addMenu(self.time_format_menu)  # ✅ DODATO: Time Format menu
+        tray_menu.addMenu(self.unit_system_menu)  # ✅ DODATO: Unit System menu
         tray_menu.addMenu(self.location_source_menu)  # ✅ DODATO: Location Source menu
         tray_menu.addSeparator()
         tray_menu.addAction(self.update_action)
@@ -2004,6 +2201,11 @@ class WeatherWidget(QMainWindow):
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.activated.connect(self.trayIconActivated)
         self.tray_icon.show()
+        
+        # ✅ Inicijalno postavi naslove menija (biće ažurirani u updateLanguageUI)
+        self.temp_unit_menu.setTitle("🌡️ Temperature")
+        self.time_format_menu.setTitle("🕐 Time")
+        self.unit_system_menu.setTitle("📏 Units")
 
     def updateTrayIcon(self):
         pixmap = QPixmap(64, 64)
@@ -2227,6 +2429,70 @@ class WeatherWidget(QMainWindow):
         """Translation helper - returns translated text for current language"""
         return self.translations[self.current_language].get(key, key)
     
+    def celsius_to_fahrenheit(self, celsius):
+        """Convert Celsius to Fahrenheit"""
+        return (celsius * 9/5) + 32
+    
+    def format_temperature(self, temp_celsius):
+        """Format temperature according to selected unit"""
+        if self.temperature_unit == 'fahrenheit':
+            temp_f = self.celsius_to_fahrenheit(temp_celsius)
+            return f"{round(temp_f)}°F"
+        else:
+            return f"{round(temp_celsius)}°C"
+    
+    def get_temp_unit_param(self):
+        """Get API parameter for temperature unit"""
+        return "fahrenheit" if self.temperature_unit == 'fahrenheit' else "celsius"
+    
+    def get_temp_symbol(self):
+        """Get temperature symbol (°C or °F)"""
+        return "°F" if self.temperature_unit == 'fahrenheit' else "°C"
+    
+    def format_time(self, time_obj):
+        """Format time according to selected format (12h or 24h)"""
+        if self.time_format == '12h':
+            return time_obj.strftime('%I:%M %p')  # 05:30 PM
+        else:
+            return time_obj.strftime('%H:%M')  # 17:30
+    
+    def format_time_short(self, time_obj):
+        """Format time for compact display (no seconds)"""
+        if self.time_format == '12h':
+            return time_obj.strftime('%I:%M %p')  # 05:30 PM
+        else:
+            return time_obj.strftime('%H:%M')  # 17:30
+    
+    # ✅ Unit system helper functions
+    def get_wind_unit_param(self):
+        """Get API parameter for wind speed unit"""
+        return "mph" if self.unit_system == 'imperial' else "kmh"
+    
+    def get_precipitation_unit_param(self):
+        """Get API parameter for precipitation unit"""
+        return "inch" if self.unit_system == 'imperial' else "mm"
+    
+    def get_wind_symbol(self):
+        """Get wind speed symbol"""
+        return "mph" if self.unit_system == 'imperial' else "km/h"
+    
+    def format_pressure(self, pressure_mbar):
+        """Format pressure according to unit system"""
+        if self.unit_system == 'imperial':
+            # Convert mbar to inHg
+            pressure_inhg = pressure_mbar * 0.02953
+            return f"{pressure_inhg:.2f} inHg"
+        else:
+            return f"{pressure_mbar} mbar"
+    
+    def format_visibility(self, visibility_km):
+        """Format visibility according to unit system - NO conversion needed, API handles it"""
+        if self.unit_system == 'imperial':
+            # API already returns different values for imperial - just show with mi symbol
+            return f"{visibility_km:.1f} mi"
+        else:
+            return f"{visibility_km:.1f} km"
+    
     def changeLanguage(self, lang_code):
         """Change widget language"""
         try:
@@ -2262,6 +2528,106 @@ class WeatherWidget(QMainWindow):
             import traceback
             traceback.print_exc()
     
+    def changeTemperatureUnit(self, unit_code):
+        """Change temperature unit (Celsius/Fahrenheit)"""
+        try:
+            print(f"🌡️ Menjam jedinicu temperature na: {unit_code}")
+            
+            # Update temperature unit
+            self.temperature_unit = unit_code
+            
+            # Update checkmarks in menu
+            for code, action in self.temp_unit_actions.items():
+                action.setChecked(code == unit_code)
+            
+            # Refresh weather to show new units
+            self.updateWeather()
+            
+            # Save preference
+            self.saveSettings()
+            
+            # Show notification
+            unit_name = "Celsius (°C)" if unit_code == "celsius" else "Fahrenheit (°F)"
+            if hasattr(self, 'tray_icon'):
+                self.tray_icon.showMessage(
+                    "Temperature Unit Changed" if self.current_language == "en" else "Jedinica Temperature Promenjena",
+                    f"Temperature unit: {unit_name}",
+                    QSystemTrayIcon.Information,
+                    2000
+                )
+        except Exception as e:
+            print(f"❌ Greška u changeTemperatureUnit: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def changeTimeFormat(self, format_code):
+        """Change time format (12h/24h)"""
+        try:
+            print(f"🕐 Menjam format vremena na: {format_code}")
+            
+            # Update time format
+            self.time_format = format_code
+            
+            # Update checkmarks in menu
+            for code, action in self.time_format_actions.items():
+                action.setChecked(code == format_code)
+            
+            # Refresh clock immediately
+            self.updateClock()
+            
+            # Refresh weather to show new time format
+            self.updateWeather()
+            
+            # Save preference
+            self.saveSettings()
+            
+            # Show notification
+            format_name = "24-hour" if format_code == "24h" else "12-hour (AM/PM)"
+            if hasattr(self, 'tray_icon'):
+                self.tray_icon.showMessage(
+                    "Time Format Changed" if self.current_language == "en" else "Format Vremena Promenjen",
+                    f"Time format: {format_name}",
+                    QSystemTrayIcon.Information,
+                    2000
+                )
+        except Exception as e:
+            print(f"❌ Greška u changeTimeFormat: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def changeUnitSystem(self, system_code):
+        """Change unit system (metric/imperial)"""
+        try:
+            print(f"📏 Menjam sistem merenja na: {system_code}")
+            
+            # Update unit system
+            self.unit_system = system_code
+            
+            # Update checkmarks in menu
+            for code, action in self.unit_system_actions.items():
+                action.setChecked(code == system_code)
+            
+            # Refresh weather to show new units
+            self.updateWeather()
+            
+            # Save preference
+            self.saveSettings()
+            
+            # Show notification
+            system_name = "Metric (km/h, mbar)" if system_code == "metric" else "Imperial (mph, inHg)"
+            if hasattr(self, 'tray_icon'):
+                self.tray_icon.showMessage(
+                    "Unit System Changed" if self.current_language == "en" else "Sistem Merenja Promenjen",
+                    f"Units: {system_name}",
+                    QSystemTrayIcon.Information,
+                    2000
+                )
+        except Exception as e:
+            print(f"❌ Greška u changeUnitSystem: {e}")
+            import traceback
+            traceback.print_exc()
+
+    
     def updateLanguageUI(self):
         """Update all static UI text elements to current language"""
         try:
@@ -2271,7 +2637,7 @@ class WeatherWidget(QMainWindow):
             # Translate dynamic labels too (last updated / offline / sleep)
             if hasattr(self, 'last_updated_label'):
                 if getattr(self, '_last_updated_time', None):
-                    self.last_updated_label.setText(self.t('last_updated_fmt').format(self._last_updated_time.strftime('%H:%M')))
+                    self.last_updated_label.setText(self.t('last_updated_fmt').format(self.format_time_short(self._last_updated_time)))
                 else:
                     self.last_updated_label.setText(self.t('last_updated_fmt').format('--:--'))
             if hasattr(self, 'offline_status_label') and self.offline_status_label.isVisible():
@@ -2311,6 +2677,31 @@ class WeatherWidget(QMainWindow):
             self.widget_only_action.setText(self.t("tray_widget_only"))
             self.click_through_action.setText(self.t("tray_click_through"))
             self.size_menu.setTitle(self.t("tray_resolution"))
+            
+            # ✅ Ažuriraj naslove temperature, time i unit menija
+            temp_icon = "🌡️"
+            time_icon = "🕐"
+            unit_icon = "📏"
+            self.temp_unit_menu.setTitle(f"{temp_icon} {self.t('temperature_unit').replace(':', '')}")
+            self.time_format_menu.setTitle(f"{time_icon} {self.t('time_format').replace(':', '')}")
+            self.unit_system_menu.setTitle(f"{unit_icon} {self.t('unit_system').replace(':', '')}")
+            
+            # ✅ Ažuriraj tekstove opcija u Time Format meniju
+            if self.current_language == "sr":
+                self.time_format_actions["24h"].setText("24-satni (17:30)")
+                self.time_format_actions["12h"].setText("12-satni (05:30 PM)")
+            else:
+                self.time_format_actions["24h"].setText("24-hour (17:30)")
+                self.time_format_actions["12h"].setText("12-hour (05:30 PM)")
+            
+            # ✅ Ažuriraj tekstove opcija u Unit System meniju
+            if self.current_language == "sr":
+                self.unit_system_actions["metric"].setText("Metrički (km/h, mbar)")
+                self.unit_system_actions["imperial"].setText("Imperijalni (mph, inHg)")
+            else:
+                self.unit_system_actions["metric"].setText("Metric (km/h, mbar)")
+                self.unit_system_actions["imperial"].setText("Imperial (mph, inHg)")
+            
             self.location_source_menu.setTitle(self.t("tray_location_source"))
             self.location_api_action.setText(self.t("location_api"))
             self.location_windows_action.setText(self.t("location_windows"))
@@ -2330,7 +2721,7 @@ class WeatherWidget(QMainWindow):
             # Last updated / status texts (translate when language changes)
             if hasattr(self, 'last_updated_label'):
                 if getattr(self, '_last_updated_time', None):
-                    self.last_updated_label.setText(self.t('last_updated_fmt').format(self._last_updated_time.strftime('%H:%M')))
+                    self.last_updated_label.setText(self.t('last_updated_fmt').format(self.format_time_short(self._last_updated_time)))
                 else:
                     self.last_updated_label.setText(self.t('last_updated_fmt').format('--:--'))
             if hasattr(self, 'offline_status_label') and self.offline_status_label.isVisible():
@@ -2631,10 +3022,14 @@ class WeatherWidget(QMainWindow):
         self.settings.setValue('current_location', self.current_location)
         self.settings.setValue('refresh_interval', self.refresh_interval)
         self.settings.setValue('language', self.current_language)  # ✅ Save language
+        self.settings.setValue('temperature_unit', self.temperature_unit)  # ✅ Save temperature unit
+        self.settings.setValue('time_format', self.time_format)  # ✅ Save time format
+        self.settings.setValue('unit_system', self.unit_system)  # ✅ Save unit system
+        self.settings.setValue('location_source', self.location_source)  # ✅ Save location source
         self.settings.setValue('window_x', self.x())
         self.settings.setValue('window_y', self.y())
 
-        print(f"💾 Sačuvane postavke na poziciji: ({self.x()}, {self.y()}), jezik: {self.current_language}")
+        print(f"💾 Sačuvane postavke na poziciji: ({self.x()}, {self.y()}), jezik: {self.current_language}, temp: {self.temperature_unit}, time: {self.time_format}, units: {self.unit_system}")
 
     def restorePosition(self):
         x = self.settings.value('window_x', 100, type=int)
@@ -2943,7 +3338,12 @@ class WeatherWidget(QMainWindow):
 
             # Open-Meteo Weather API
             # ✅ v2.1.5: Dodato minutely_15 za "nowcast" preciznost (0-2h)
-            weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover,rain,snowfall&minutely_15=precipitation,precipitation_probability,rain,showers,snowfall&hourly=temperature_2m,weather_code,precipitation_probability,precipitation,rain,showers,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&timezone=auto"
+            # ✅ v2.1.8: Dodato temperature_unit za Celsius/Fahrenheit izbor
+            # ✅ v2.1.9: Dodato wind_speed_unit i precipitation_unit za Metric/Imperial izbor
+            temp_unit_param = self.get_temp_unit_param()
+            wind_unit_param = self.get_wind_unit_param()
+            precip_unit_param = self.get_precipitation_unit_param()
+            weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover,rain,snowfall&minutely_15=precipitation,precipitation_probability,rain,showers,snowfall&hourly=temperature_2m,weather_code,precipitation_probability,precipitation,rain,showers,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&temperature_unit={temp_unit_param}&wind_speed_unit={wind_unit_param}&precipitation_unit={precip_unit_param}&timezone=auto"
             
             try:
                 response = self.session.get(weather_url, timeout=15)
@@ -2960,7 +3360,7 @@ class WeatherWidget(QMainWindow):
                 # ✅ Last updated timestamp (stays visible even when offline/sleep)
                 self._last_updated_time = datetime.now()
                 if hasattr(self, 'last_updated_label'):
-                    self.last_updated_label.setText(self.t('last_updated_fmt').format(self._last_updated_time.strftime('%H:%M')))
+                    self.last_updated_label.setText(self.t('last_updated_fmt').format(self.format_time_short(self._last_updated_time)))
                 # Ako smo bili u sleep recovery modu, skloni status
                 if getattr(self, '_sleep_detected', False):
                     self._sleep_detected = False
@@ -3011,16 +3411,18 @@ class WeatherWidget(QMainWindow):
                 
                 self.current_temp = f"{int(temp)}°"
                 self.city_label.setText(self.normalizeCityName(city_name))
-                self.temp_label.setText(f"{weather_icon} {temp}°C")
+                temp_symbol = self.get_temp_symbol()
+                self.temp_label.setText(f"{weather_icon} {temp}{temp_symbol}")
                 self.desc_label.setText(desc.capitalize())  # ✅ VELIKO SLOVO (oblačno → Oblačno)
-                self.feels_label.setText(f"{feels}°C")
+                self.feels_label.setText(f"{feels}{temp_symbol}")
                 self.humid_label.setText(f"{humidity}%")
-                self.wind_label.setText(f"{wind_speed} km/h {wind_direction}")
-                self.pressure_label.setText(f"{pressure} mbar")
-                self.visibility_label.setText(f"{visibility:.1f} km")
+                wind_symbol = self.get_wind_symbol()
+                self.wind_label.setText(f"{wind_speed} {wind_symbol} {wind_direction}")
+                self.pressure_label.setText(self.format_pressure(pressure))
+                self.visibility_label.setText(self.format_visibility(visibility))
                 self.clouds_label.setText(f"{cloudiness}%")
-                self.sunrise_label.setText(sunrise_time.strftime("%H:%M"))
-                self.sunset_label.setText(sunset_time.strftime("%H:%M"))
+                self.sunrise_label.setText(self.format_time_short(sunrise_time))
+                self.sunset_label.setText(self.format_time_short(sunset_time))
                 
                 uv_color = self.getUVColor(uv_value)
                 self.uv_label.setText(f"{uv_value}")
@@ -3030,16 +3432,17 @@ class WeatherWidget(QMainWindow):
                 self.updateTrayIcon()
                 # ✅ Normalize city name and use translated desc for tray tooltip
                 normalized_city = self.normalizeCityName(city_name)
-                self.tray_icon.setToolTip(f"{normalized_city}: {temp}°C, {desc}")
+                self.tray_icon.setToolTip(f"{normalized_city}: {temp}{temp_symbol}, {desc}")
                 
-                print(f"✅ Uspešno: {temp}°C - {desc}")
+                print(f"✅ Uspešno: {temp}{temp_symbol} - {desc}")
                 
                 self.update5DayForecast(data, location_data)
                 
             else:
                 # API greška - resetuj sve labele
                 self.desc_label.setText(f"❌ API greška: {response.status_code}")
-                self.temp_label.setText("--°C")
+                temp_symbol = self.get_temp_symbol()
+                self.temp_label.setText(f"--{temp_symbol}")
                 error_text = "Greška" if self.current_language == "sr" else "Error"
                 self.precip_alert_label.setText(f"⚠️ {error_text}")
                 no_data_text = "Nema podataka" if self.current_language == "sr" else "No data"
@@ -3056,7 +3459,8 @@ class WeatherWidget(QMainWindow):
         except Exception as e:
             # Exception - resetuj sve labele
             self.desc_label.setText(f"❌ Greška: {str(e)}")
-            self.temp_label.setText("--°C")
+            temp_symbol = self.get_temp_symbol()
+            self.temp_label.setText(f"--{temp_symbol}")
             error_text = "Greška" if self.current_language == "sr" else "Error"
             self.precip_alert_label.setText(f"⚠️ {error_text}")
             no_data_text = "Nema podataka" if self.current_language == "sr" else "No data"
@@ -3105,9 +3509,10 @@ class WeatherWidget(QMainWindow):
                 # ✅ CAPITALIZE description (oblačno → Oblačno)
                 desc_capitalized = desc.capitalize() if desc else desc
                 
+                temp_symbol = self.get_temp_symbol()
                 self.forecast_labels[i]['day'].setText(f"{day_translated} {date_display}")
                 self.forecast_labels[i]['desc'].setText(f"{weather_icon} {desc_capitalized}")
-                self.forecast_labels[i]['temp'].setText(f"{temp_min}° / {temp_max}°")
+                self.forecast_labels[i]['temp'].setText(f"{temp_min}{temp_symbol} / {temp_max}{temp_symbol}")
             
             print("✅ 5-dnevna prognoza ažurirana")
             
@@ -3481,8 +3886,9 @@ class WeatherWidget(QMainWindow):
                     precip_prob = precip_probs[i] if i < len(precip_probs) and precip_probs[i] is not None else 0
                     
                     # ✅ ČUVAJ weather_code umesto desc (za prevođenje kasnije!)
+                    time_str = self.format_time_short(forecast_time)
                     self.hourly_forecast_data.append({
-                        'time': forecast_time.strftime('%H:%M'),
+                        'time': time_str,
                         'temp': round(temp),
                         'icon': weather_icon,
                         'weather_code': weather_code,  # ✅ Čuvaj code!
@@ -3517,10 +3923,11 @@ class WeatherWidget(QMainWindow):
                     precip_label = "rain" if self.current_language == "en" else "kiša"
                 
                 # Tekst za label - kompaktan prikaz
+                temp_symbol = self.get_temp_symbol()
                 if precip > 50:
-                    label_text = f"{time_str}: {icon} {temp}°C ({precip_label} {precip}%)"
+                    label_text = f"{time_str}: {icon} {temp}{temp_symbol} ({precip_label} {precip}%)"
                 else:
-                    label_text = f"{time_str}: {icon} {temp}°C"
+                    label_text = f"{time_str}: {icon} {temp}{temp_symbol}"
                 
                 self.weather_alert_label.setText(label_text)
                 print(f"✅ Satna prognoza: {label_text} (ukupno {len(self.hourly_forecast_data)} sati)")

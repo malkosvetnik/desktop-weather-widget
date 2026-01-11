@@ -1,481 +1,797 @@
 # 🌤️ Desktop Weather Widget
 
-[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+A beautiful, customizable desktop weather widget for Windows with real-time weather data, dual location systems, and comprehensive customization options.
+
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/malkosvetnik/desktop-weather-widget/releases)
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/malkosvetnik/desktop-weather-widget)](https://github.com/malkosvetnik/desktop-weather-widget/stargazers)
-[![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)](https://www.microsoft.com/windows)
+[![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
 
-A beautiful, feature-rich desktop weather widget for Windows with **15-minute precision nowcast**, real-time weather updates, and bilingual support (Serbian/English).
-
-> **🎯 Better than Microsoft's built-in weather widget!**
-
-![Weather Widget Screenshot](screenshots/main_widget_english.png)
-
-*Desktop weather widget with bilingual support and 15-minute nowcast precision*
-
----
-
-## 🎊 What's New in v2.1.7
-
-### 🛰️ **Windows Location API Support** - NEW!
-Accurate location detection using your device's GPS and Wi-Fi triangulation:
-
-- **📍 Dual Location System**: Choose between IP-based (API Location) or GPS/Wi-Fi (Windows Location)
-- **🎯 Precise positioning**: Uses the same location API as Windows apps - no more wrong city from IP!
-- **🔄 Easy switching**: Toggle via tray menu "Location Source"
-- **⚠️ Smart detection**: Automatically detects if Location services are disabled
-- **📋 Helpful guidance**: Bilingual setup instructions when needed
-- **✅ Automatic fallback**: Falls back to API Location if Windows Location unavailable
-
-**Example accuracy:**
-```
-API Location (IP):      Belgrade (±20km from ISP location)
-Windows Location:       Novi Beograd, exact coordinates
-```
-
----
-
-## 🎊 Previous Updates
-
-### v2.1.6 - 15-Minute Nowcast
-The game-changer feature that sets this widget apart:
-
-- **🎯 Radar-like precision**: See rain coming 15, 30, 45 minutes ahead
-- **📍 Minutely forecasts**: 8 intervals × 15min = 2-hour nowcast window
-- **💧 Smart detection**: Distinguishes between rain, snow, and storms
-- **🔔 Proactive alerts**: "Rain in 45 min (70%)" gives you time to react
-
-**Example alerts:**
-```
-⚡ IMMEDIATE (0-2h):   "Rain in 45 min (70%)"
-📊 SHORT-TERM (2-24h): "Rain in 6h (55%)"
-```
-
-### 🧠 4-Layer Priority System
-Intelligently prioritizes weather data:
-
-1. **Current conditions** → "Rain NOW!" (when actively raining)
-2. **Weather code validation** → Confirms precipitation type
-3. **Minutely nowcast (0-2h)** → 15-minute precision alerts
-4. **Hourly forecast (2-24h)** → Long-term planning
+![Main Widget](screenshots/main_widget_serbian.png)
 
 ---
 
 ## ✨ Features
 
-### 📍 Location Services
-- **🆕 Windows Location API**: GPS/Wi-Fi triangulation for accurate positioning
-- **Dual location system**: Choose between API (IP-based) or Windows Location (GPS/Wi-Fi)
-- **Auto-location** or manual city selection
-- **Smart fallback**: Automatic switch if Windows Location unavailable
-- **Setup guidance**: Bilingual instructions for enabling Location services
+### 🌡️ **NEW in v2.2.0: Complete Customization System**
 
-### 🌡️ Current Weather
-- Real-time temperature and "feels like" temperature
+#### Temperature Units
+- **Celsius (°C)** or **Fahrenheit (°F)** selection
+- Instant conversion across all displays
+- Persistent preference storage
+
+#### Time Format
+- **12-hour (AM/PM)** or **24-hour** format
+- Affects clock, timestamps, sunrise/sunset
+- Applies to all time displays
+
+#### Measurement Units
+- **Metric** (km/h, mbar, km) or **Imperial** (mph, inHg, mi)
+- Wind speed conversion
+- Pressure conversion
+- Visibility conversion
+
+#### Battery Status (Laptops)
+- Real-time battery percentage
+- Charging indicator (🔌)
+- Color-coded warnings:
+  - 🔋 Green: Charging
+  - 🔋 White: 30%+ (normal)
+  - 🔋 Orange: 15-29% (low)
+  - 🪫 Red: <15% (critical)
+- Auto-hides on desktop PCs
+
+### ⏱️ Precision Weather Forecasting
+
+#### 15-Minute Nowcast
+- Ultra-precise 0-2 hour precipitation forecast
+- 8 intervals × 15 minutes = radar-like accuracy
+- Real-time alerts: "Rain in 15 min (70%)"
+- Smart type detection (rain vs snow)
+
+#### Dual Location System
+- **🔡 API Location (IP-based)**: Works everywhere, city-level accuracy
+- **🛰️ Windows Location (GPS/Wi-Fi)**: Street-level accuracy (±100m)
+- Easy switching via tray menu
+- Automatic fallback if unavailable
+
+### 📊 Comprehensive Weather Data
+
+#### Current Conditions
+- Temperature with "feels like"
 - Weather description with emoji icons
-- Humidity, wind speed & direction
+- Humidity percentage
+- Wind speed and direction (8 compass points)
 - Atmospheric pressure
-- Cloud cover percentage
 - Visibility distance
+- Cloud cover percentage
+- UV Index with color coding
+- Air Quality Index (AQI)
 
-### 🌧️ Precipitation Alerts
-- **🆕 15-minute nowcast** (v2.1.6): "Rain in 45 min (70%)"
-- **Real-time detection**: Shows "Rain NOW!" when it's actively raining
-- **Smart forecasting**: Accurate timing for upcoming rain, snow, or storms
-- **Intelligent rounding**: 1h 56min shows as "2h" (not "1h")
-- Supports rain, snow, and thunderstorms
+#### Forecasts
+- **5-Day Forecast**: Min/max temps, weather icons
+- **Hourly Forecast (12h)**: Interactive tooltip with detailed data
+- **Precipitation Nowcast**: 15-minute precision for 0-2 hours
 
-### 📊 Additional Information
-- **UV Index** with color-coded severity
-- **Air Quality Index (AQI)** with detailed pollutant breakdown tooltip
-- **5-Day Forecast** with min/max temperatures
-- **Hourly Forecast** (12h) - click on "SATNA PROGNOZA" box to see detailed tooltip
-- **Sunrise & Sunset** times
+#### Environmental Monitoring
+- **UV Index**: Color-coded (Low/Moderate/High/Very High/Extreme)
+- **Air Quality**: AQI with pollutant breakdown
+  - PM2.5, PM10, O₃, NO₂, SO₂, CO levels
+  - Health implications
+  - Color-coded alerts
 
 ### 🎨 Customization
-- **Bilingual**: Serbian (Latin) and English
-- **Auto-location** or manual city selection
-- **Adjustable refresh intervals**: 5, 10, 15, 30, or 60 minutes
-- **Resolution presets**: From XGA (1024x768) to 8K UHD
-- **Click-through mode**: Widget becomes transparent to clicks
-- **Position locking**: Prevent accidental movement
-- **System tray integration**: Minimize to tray
 
-### 🛌 Advanced Features
-- **Sleep mode detection**: Automatically refreshes after system wake
-- **Hibernate support**: Works after full system shutdown/restore
-- **Network retry logic**: 3 attempts with 15s delays
-- **Graceful degradation**: Falls back elegantly if API data missing
-- **Startup with Windows**: Optional auto-start
-- **Persistent settings**: Remembers your preferences
+#### Display Options
+- **Bilingual**: Full Serbian and English support
+- **Resolution Presets**: XGA to 8K UHD (8 presets)
+- **Position Locking**: Keep widget in place
+- **Click-Through Mode**: Interact with desktop through widget
+- **Temperature Units**: Celsius or Fahrenheit
+- **Time Format**: 12-hour or 24-hour
+- **Unit System**: Metric or Imperial
 
----
+#### System Integration
+- **System Tray**: Temperature display in tray icon
+- **Auto-Start**: Run with Windows startup
+- **Widget-Only Mode**: Hide tray, show widget only
+- **Sleep Mode Recovery**: Auto-refresh after wake
 
-## 📥 Installation
+### 🔄 Smart Updates
 
-### Option 1: Run from Source
-1. Install Python 3.8+ and dependencies:
-   ```bash
-   pip install PyQt5 requests
-   ```
-
-2. Download `weather_widget.pyw`
-
-3. **No API key required!** Uses free Open-Meteo API
-
-4. Run the widget:
-   ```bash
-   python weather_widget.pyw
-   ```
-
-### Option 2: Download Compiled .exe (Coming Soon!)
-No Python installation required - just download and run!
-
----
-
-## 🎮 Usage
-
-### Basic Controls
-- **Drag widget**: Click and drag anywhere to move (when unlocked)
-- **🔒 Lock button**: Lock/unlock position
-- **📍 Auto button**: Toggle automatic location detection
-- **Search box**: Manually enter city name
-- **✕ Close**: Hide widget (still runs in tray)
-
-### Tray Menu
-Right-click the tray icon for:
-- Show/Hide widget
-- **📍 Location Source**: Switch between API Location (IP) and Windows Location (GPS/Wi-Fi)
-- Enable/disable startup with Windows
-- Widget-only mode (no tray icon)
-- Click-through mode
-- Resolution presets
-- Refresh weather
-- Language selection (Serbian/English)
-- Exit application
-
-### Tooltips
-- **Hover over Air Quality (Zagađenje)**: See detailed pollutant breakdown
-- **Click on SATNA PROGNOZA box**: View 12-hour forecast table
-- **Hover over precipitation alert**: See detailed nowcast timeline
-
----
-
-## 📍 Location Sources
-
-### 📡 API Location (Default)
-- Uses your IP address for location
-- Quick and simple, no setup required
-- City-level accuracy (~10-50 km)
-- Works immediately on any device
-
-### 🛰️ Windows Location (Accurate & Precise)
-- Uses GPS/Wi-Fi triangulation
-- **Much more accurate** than IP-based location (~50-500 m)
-- Shows your exact neighborhood/district
-- Requires Windows Location services enabled
-
-#### How to Enable Windows Location:
-
-**Step 1: Enable in Widget**
-1. Right-click tray icon → **"📍 Izvor Lokacije"** / **"📍 Location Source"**
-2. Select **"Windows Lokacija (GPS/Wi-Fi)"** / **"Windows Location (GPS/Wi-Fi)"**
-
-**Step 2: If Dialog Appears**
-If you see "Windows Location nije dostupan" / "Windows Location Not Available":
-
-1. Open **Settings** (⊞ Win + I)
-2. Go to **Privacy & Security** → **Location**
-3. Turn ON all 3 options:
-   - ✅ **Location services**
-   - ✅ **Let apps access your location**
-   - ✅ **Let desktop apps access your location**
-4. **Restart your computer** (important!)
-5. Try Windows Location again in widget
-
-**Step 3: Verify**
-- Widget should now show your precise location
-- First use may take 10-30 seconds (Wi-Fi scan)
-- Subsequent uses: 1-5 seconds
-
-#### Requirements for Windows Location:
-- ✅ Windows 10/11
-- ✅ Wi-Fi adapter (for triangulation)
-- ✅ Location services enabled
-- ✅ Computer restart after enabling
-
-**Note:** Desktop PCs without Wi-Fi adapter cannot use Windows Location. Laptops work perfectly!
-
----
-
-## 🆕 What's New - Version History
-
-### v2.1.7 (January 10, 2026) - WINDOWS LOCATION UPDATE 🛰️
-
-#### 🚀 New Features
-- **Windows Location API support** - GPS/Wi-Fi positioning for accurate location
-- **Dual location system** - Easy switching between API (IP) and Windows Location
-- **Smart detection** - Detects when Location services are disabled
-- **Bilingual setup guides** - Step-by-step instructions in Serbian and English
-- **Automatic fallback** - Gracefully falls back to API Location if needed
-- **Registry validation** - Checks Windows Location service status
-
-#### 🛠️ Bug Fixes
-- Fixed city name localization (Cyrillic → Latin conversion)
-- Fixed wind direction translation (SR: JI → EN: SE)
-- Fixed location_data dictionary for Windows Location path
-- Fixed silent fallback behavior when Location disabled
-- Improved error handling for location services
-
-#### 📊 Location Accuracy Comparison
-
-| Device Type | API Location (IP) | Windows Location |
-|-------------|-------------------|------------------|
-| Desktop without Wi-Fi | ✅ Works (ISP location) | ❌ Unavailable |
-| Desktop with Wi-Fi | ✅ Works (±20km) | ✅ Works (±0.5km) |
-| Laptop | ✅ Works (±20km) | ✅ Works (±0.1km) |
-| Accuracy | City-level | Street-level |
-
----
-
-### v2.1.6 (January 9, 2026) - NOWCAST UPDATE 🎊
-
-#### 🚀 New Features
-- **15-minute precision nowcast** using `minutely_15` API
-- **4-layer priority system** for intelligent weather alerts
-- **Time-aware parsing**: Always shows future intervals (skips past)
-- **Snow vs rain detection**: Accurately distinguishes precipitation type
-- **Graceful API fallback**: Works even with incomplete data
-
-#### 🐛 Bug Fixes
-- Fixed minutely forecast time parsing (now correctly identifies future intervals)
-- Fixed precipitation type detection (snow vs rain)
-- Fixed edge cases at midnight rollover
-- Improved sleep/wake cycle handling
-
-#### 🔧 Technical Improvements
-- Smart interval selection (finds first future 15-min block)
-- Better error recovery and logging
-- Optimized API requests (only fetches needed data)
-- Enhanced tooltip formatting for nowcast display
-
-### v2.1.0 (January 5, 2026)
-- Full English language support
-- Real-time precipitation detection ("Rain NOW!")
-- Improved time calculation (proper rounding)
-- Fixed translation issues
-- Better API data completeness
-
-### v2.0.0 (Initial Public Release)
-- Complete weather widget with all core features
-- Serbian language support
-- Sleep mode detection
-- System tray integration
+- Auto-refresh: 5-60 minute intervals
+- Network retry logic (3 attempts)
+- Offline graceful handling
+- Sleep/hibernate detection
+- Last updated timestamp
 
 ---
 
 ## 📸 Screenshots
 
-### Main Widget - English
-![English View](screenshots/main_widget_english.png)
+### Main Widget - All Variations
 
-### Main Widget - Serbian
-![Main View](screenshots/main_widget_serbian.png)
+<details>
+<summary>Serbian Interface (Click to expand)</summary>
 
-### Precipitation Alert
+![Serbian Widget](screenshots/main_widget_serbian.png)
+*Default Serbian interface with metric units*
+
+</details>
+
+<details>
+<summary>English Interface (Click to expand)</summary>
+
+![English Widget](screenshots/main_widget_english.png)
+*Full English translation*
+
+</details>
+
+<details>
+<summary>Temperature Units (Click to expand)</summary>
+
+![Celsius](screenshots/main_widget_celsius.png)
+*Celsius mode*
+
+![Fahrenheit](screenshots/main_widget_fahrenheit.png)
+*Fahrenheit mode*
+
+</details>
+
+<details>
+<summary>Unit Systems (Click to expand)</summary>
+
+![Metric](screenshots/main_widget_serbian.png)
+*Metric: km/h, mbar, km*
+
+![Imperial](screenshots/main_widget_imperial.png)
+*Imperial: mph, inHg, mi*
+
+</details>
+
+### Interactive Features
+
+![Hourly Forecast Tooltip](screenshots/hourly_forecast_tooltip.png)
+*Interactive 12-hour forecast with detailed data*
+
 ![Precipitation Alert](screenshots/precipitation_alert.png)
+*Real-time precipitation alerts*
 
-### 15-Minute Nowcast (NEW in v2.1.6!)
-*Coming soon - screenshot of minutely forecast tooltip*
+![Air Quality Tooltip](screenshots/air_quality_tooltip.png)
+*Detailed air quality breakdown*
 
-### Hourly Forecast Tooltip
-![Hourly Forecast](screenshots/hourly_forecast_tooltip.png)
+### Tray Menu Options
 
-### Air Quality Tooltip
-![Air Quality](screenshots/air_quality_tooltip.png)
-
-### Language Menu
-![Language Menu](screenshots/language_menu.png)
-
-### Tray Menu
 ![Tray Menu](screenshots/tray_menu.png)
+*Complete tray menu with all options*
 
-### 📍 Location Menu
+![Language Menu](screenshots/language_menu.png)
+*Serbian/English language selector*
 
-![Location Menu - English](screenshots/location_menu_english.png)
-![Location Menu - Serbian](screenshots/location_menu_serbian.png)
----
+![Temperature Menu](screenshots/temperature_menu_celsius.png)
+*Celsius/Fahrenheit selector*
 
-## 🔧 Requirements
+![Time Format Menu](screenshots/time_format_menu.png)
+*12h/24h time format selector*
 
-- **Python**: 3.8 or higher
-- **PyQt5**: 5.15+
-- **requests**: 2.25+
-- **geocoder**: 1.38+ (for Windows Location support)
-- **No API key required!** (uses free Open-Meteo API)
+![Unit System Menu](screenshots/unit_system_menu.png)
+*Metric/Imperial unit selector*
 
----
+![Location Menu Serbian](screenshots/location_menu_serbian.png)
+*Location source selector (Serbian)*
 
-## 📝 Configuration
-
-Settings are automatically saved in Windows Registry under:
-```
-HKEY_CURRENT_USER\Software\WeatherWidget\Settings
-```
-
-Stored settings:
-- Window position
-- Lock status
-- Click-through mode
-- Language preference
-- Refresh interval
-- Resolution preset
-- Startup mode
+![Location Menu English](screenshots/location_menu_english.png)
+*Location source selector (English)*
 
 ---
 
-## 🌐 API Information
+## 🚀 Quick Start
 
-This widget uses **100% free APIs** with no registration required:
+### Prerequisites
 
-- **Open-Meteo Weather API** (free, no key required)
-  - Current weather, forecasts, UV index
-  - **Minutely 15-min forecasts** (nowcast)
-  - Hourly and daily forecasts
-  - https://open-meteo.com
+- **Python 3.8+**
+- **Windows 10/11**
+- **Internet connection**
 
-- **Open-Meteo Air Quality API** (free)
-  - AQI and pollutant data
-  - https://open-meteo.com/en/docs/air-quality-api
+### Installation
 
----
+#### Option 1: Run from Source (Recommended)
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-### Development Setup
 ```bash
+# 1. Clone the repository
 git clone https://github.com/malkosvetnik/desktop-weather-widget.git
 cd desktop-weather-widget
-pip install -r requirements.txt
-python weather_widget.pyw
+
+# 2. Install dependencies
+pip install PyQt5 requests geocoder psutil
+
+# 3. Run the widget
+python weather_widget_final.pyw
 ```
 
-### Testing Checklist
-- [ ] Test on Windows 10 and 11
-- [ ] Test sleep/wake cycle
-- [ ] Test hibernate recovery
-- [ ] Test network disconnection
-- [ ] Test both languages (Serbian/English)
-- [ ] Test all resolution presets
-- [ ] Test multi-monitor setup
+#### Option 2: Download EXE (Coming Soon!)
+
+1. Download latest release from [Releases](https://github.com/malkosvetnik/desktop-weather-widget/releases)
+2. Extract ZIP file
+3. Run `WeatherWidget.exe`
+
+### First-Time Setup
+
+1. Widget appears on desktop
+2. Right-click tray icon → Choose language (Serbian/English)
+3. Select location source (API or Windows Location)
+4. Choose temperature unit (Celsius/Fahrenheit)
+5. Select time format (12h/24h)
+6. Pick measurement system (Metric/Imperial)
+7. Enjoy! 🎉
 
 ---
 
-## 🐛 Known Issues & Troubleshooting
+## 📖 Usage Guide
 
-### Windows Location not working
-**Symptoms**: Dialog appears "Windows Location nije dostupan" / "Windows Location Not Available"
+### Customization Options
 
-**Solutions**:
-1. **Enable Location Services**:
-   - Open Settings (⊞ Win + I)
-   - Go to Privacy & Security → Location
-   - Turn ON all 3 options
-   
-2. **Restart Computer** (very important!)
-   - Location permissions only take effect after restart
+#### Temperature Units
+```
+Tray → 🌡️ Temperature Unit
+  → Celsius (°C)
+  → Fahrenheit (°F)
+```
+- Converts all temperature displays instantly
+- Affects: Current temp, feels like, 5-day forecast, hourly forecast
 
-3. **Check Wi-Fi adapter**:
-   - Desktop PCs without Wi-Fi cannot use Windows Location
-   - Use API Location instead
+#### Time Format
+```
+Tray → 🕐 Time Format
+  → 24-hour (17:30)
+  → 12-hour (05:30 PM)
+```
+- Updates clock, timestamps, sunrise/sunset
+- Applies to all time displays
 
-4. **Try manual city search**:
-   - Click 📍 Auto button → Enter city name
-   - Works without location services
+#### Measurement Units
+```
+Tray → 📏 Measurement Units
+  → Metric (km/h, mbar, km)
+  → Imperial (mph, inHg, mi)
+```
+- Wind speed: km/h ↔ mph
+- Pressure: mbar ↔ inHg
+- Visibility: km ↔ mi
 
-### Widget doesn't refresh after sleep
-- Solution: Widget has built-in 30s delay after wake - this is intentional to wait for network
+#### Language Selection
+```
+Tray → 🌐 Jezik / Language
+  → 🇷🇸 Srpski
+  → 🇬🇧 English
+```
+- Full UI translation
+- Affects all text, menus, dialogs
 
-### Nowcast shows no data
-- Solution: Minutely forecasts are only available for some regions - widget gracefully falls back to hourly
+#### Location Source
+```
+Tray → 📍 Izvor Lokacije / Location Source
+  → 🔡 API Lokacija (IP)
+  → 🛰️ Windows Lokacija (GPS/Wi-Fi)
+```
 
-### High DPI scaling issues
-- Solution: Use resolution presets from tray menu to match your display
+**API Location (IP):**
+- Works everywhere
+- No setup required
+- City-level accuracy (±20 km)
 
-### Report other issues
-- Open an issue: https://github.com/malkosvetnik/desktop-weather-widget/issues
+**Windows Location (GPS/Wi-Fi):**
+- Street-level accuracy (±100m)
+- Requires Wi-Fi adapter
+- One-time setup (see below)
+
+### Windows Location Setup
+
+**Requirements:**
+- Wi-Fi adapter (laptops have this)
+- Windows 10/11
+
+**Steps:**
+1. Press `⊞ Win + I` → Settings
+2. Privacy & Security → Location
+3. Turn ON all 3 options:
+   - Location services
+   - Let apps access your location
+   - Let desktop apps access your location
+4. **Restart computer** (required!)
+5. Tray → Location Source → Windows Location
+
+**Troubleshooting:**
+- Desktop without Wi-Fi? → Use API Location instead
+- Still not working? → Check Windows Settings again
+- Privacy concerns? → Use API Location
+
+### Display Modes
+
+#### Position Lock
+```
+Tray → ✓ Zaključaj poziciju / Lock position
+```
+- Prevents accidental dragging
+- Unlock to reposition
+
+#### Click-Through Mode
+```
+Tray → Prozirni režim / Click-Through Mode
+```
+- Interact with desktop through widget
+- Widget becomes non-interactive
+
+#### Widget-Only Mode
+```
+Tray → Widget Only (no tray)
+```
+- Hides tray icon
+- Widget remains visible
+- Use X button to close
+
+#### Auto-Start
+```
+Tray → ✓ Pokreni sa Windows-om / Run at Windows Startup
+```
+- Launches with Windows
+- Widget appears automatically
+
+### Resolution Presets
+
+```
+Tray → Rezolucija Monitora / Monitor Resolution
+  → XGA (1024x768)
+  → Full HD (1920x1080)  ← Recommended
+  → 4K UHD (3840x2160)
+  → 8K UHD (7680x4320)
+```
+- Scales widget for your monitor
+- Maintains aspect ratio
+- Font sizes adjust automatically
+
+### Refresh Interval
+
+```
+Header → Osvežavanje / Refresh dropdown
+  → 5 min
+  → 10 min
+  → 15 min
+  → 30 min (default)
+  → 60 min
+```
+- Balances freshness vs API usage
+- Lower = more current data
+- Higher = less network traffic
+
+### Manual Updates
+
+```
+Tray → Osvežitemp Vreme / Refresh Weather
+```
+- Instant data refresh
+- Bypasses scheduled update
+- Use if data seems stale
 
 ---
 
-## 📜 License
+## 🌍 Language Support
 
-This project is open source and available under the MIT License.
+### Serbian (Srpski) - Latin Script
+
+```
+🌡️ Jedinica temperature
+  → Celzijus (°C)
+  → Farenhajt (°F)
+
+🕐 Format vremena
+  → 24-satni (17:30)
+  → 12-satni (05:30 PM)
+
+📏 Sistem merenja
+  → Metrički (km/h, mbar)
+  → Imperijalni (mph, inHg)
+```
+
+### English
+
+```
+🌡️ Temperature Unit
+  → Celsius (°C)
+  → Fahrenheit (°F)
+
+🕐 Time Format
+  → 24-hour (17:30)
+  → 12-hour (05:30 PM)
+
+📏 Measurement Units
+  → Metric (km/h, mbar)
+  → Imperial (mph, inHg)
+```
+
+**All features fully translated:**
+- UI labels
+- Tray menus
+- Tooltips
+- Weather descriptions
+- Dialog messages
+- Error messages
 
 ---
 
-## 🙏 Credits
+## ⚙️ Configuration
 
-- Weather data: [Open-Meteo](https://open-meteo.com)
-- Icons: Unicode emoji
-- Framework: PyQt5
-- Developed with ❤️ and lots of ☕
+### Settings Storage
+
+All preferences saved in Windows Registry:
+```
+HKEY_CURRENT_USER\Software\WeatherWidget
+```
+
+**Stored settings:**
+- Window position (x, y)
+- Widget locked state
+- Click-through mode
+- Auto-location preference
+- Current location
+- Refresh interval
+- Language (Serbian/English)
+- Temperature unit (Celsius/Fahrenheit)
+- Time format (12h/24h)
+- Unit system (Metric/Imperial)
+- Location source (API/Windows)
+
+### Reset to Defaults
+
+Run cleanup script:
+```bash
+python cleanup_registry.py
+```
+
+Or manually delete registry key:
+```
+regedit → HKEY_CURRENT_USER\Software\WeatherWidget → Delete
+```
 
 ---
 
-## 📞 Support
+## 🔧 Technical Details
 
-Found a bug or have a suggestion?
-- Open an issue: https://github.com/malkosvetnik/desktop-weather-widget/issues
-- Check existing issues first!
-- Star ⭐ the repo if you find it useful!
+### Data Sources
+
+**Weather Data:**
+- [Open-Meteo API](https://open-meteo.com) (Free, no key required!)
+- Updates: Every 15 minutes
+- Coverage: Worldwide
+- Data: Current conditions, hourly, daily, UV, air quality
+
+**Location Services:**
+- IP Geolocation: [ip-api.com](https://ip-api.com)
+- Reverse Geocoding: [Nominatim](https://nominatim.openstreetmap.org/)
+- Windows Location: Native Windows Location API
+
+### API Endpoints
+
+```
+Weather: https://api.open-meteo.com/v1/forecast
+  - Current conditions
+  - Minutely (15-min) forecast
+  - Hourly forecast
+  - Daily forecast (5-day)
+  - UV Index
+  
+Air Quality: https://air-quality-api.open-meteo.com/v1/air-quality
+  - AQI
+  - PM2.5, PM10
+  - O₃, NO₂, SO₂, CO
+```
+
+### Dependencies
+
+```
+PyQt5>=5.15.0        # GUI framework
+requests>=2.25.0     # HTTP client
+geocoder>=1.38.1     # Windows Location API
+psutil>=5.8.0        # Battery status
+```
+
+Install all:
+```bash
+pip install PyQt5 requests geocoder psutil
+```
+
+### Resource Usage
+
+- **RAM**: ~50-100 MB
+- **CPU**: <1% (idle), ~2% (updating)
+- **Network**: ~10 KB per API call
+- **Disk**: ~500 KB (application)
+- **Battery impact**: Negligible (laptop)
+
+### Performance
+
+- **Startup**: <2 seconds
+- **UI response**: Instant
+- **API calls**: 3-5 seconds
+- **Memory footprint**: Minimal
+- **Sleep recovery**: <10 seconds
 
 ---
 
-## 🗺️ Roadmap
+## 🛠️ Troubleshooting
 
-### Upcoming Features
+### Common Issues
+
+#### Widget not showing
+**Solution:**
+- Right-click tray icon (bottom-right)
+- Click "Prikaži Widget" / "Show Widget"
+- Check if widget is off-screen (unlock & drag)
+
+#### Weather data not loading
+**Solution:**
+1. Check internet connection
+2. Tray → Refresh Weather
+3. Wait 30 seconds for API response
+4. Check firewall (allow Python/widget)
+
+#### Windows Location not working
+**Solution:**
+1. Desktop PC without Wi-Fi? → Use API Location instead
+2. Check Settings → Privacy → Location (all ON)
+3. Restart computer (required after enabling)
+4. Wait 30 seconds for first Wi-Fi scan
+
+#### Wrong city displayed
+**Solutions:**
+- **API Location**: Shows ISP location (±20 km)
+  - Use manual city search
+  - Or enable Windows Location
+- **Windows Location**: Enable Wi-Fi, restart computer
+
+#### Widget too small/large
+**Solution:**
+- Tray → Monitor Resolution
+- Select your actual resolution
+- Or closest match
+
+#### Battery not showing
+**Explanation:**
+- Desktop PCs have no battery (normal!)
+- Laptops will show battery automatically
+- No action needed
+
+#### High CPU/memory usage
+**Solutions:**
+- Increase refresh interval (30+ min)
+- Check for multiple instances running
+- Close and restart widget
+
+---
+
+## 🎯 Roadmap
+
+### v2.3.0 (Next)
 - [ ] Desktop notifications (Windows toast)
-- [ ] Customizable themes (dark/light/auto)
-- [ ] More language options (German, French, Spanish)
-- [ ] Widget size presets (small/medium/large)
-- [ ] Multiple location tracking
+- [ ] Custom themes (dark/light/auto)
+- [ ] Widget size presets (mini/compact/full)
 - [ ] Weather radar integration
-- [ ] Severe weather alerts
 
-### Long-term Goals
-- [ ] Microsoft Store release
-- [ ] macOS/Linux support
+### v2.4.0 (Future)
+- [ ] Multiple location tracking
+- [ ] Weather alerts (severe weather)
+- [ ] Moon phases display
+- [ ] Customizable layout
+
+### v3.0.0 (Long-term)
+- [ ] macOS support
+- [ ] Linux support
 - [ ] Mobile companion app
 - [ ] Smart home integration
 
 ---
 
-## 🌟 Why This Widget?
+## 🤝 Contributing
 
-### vs. Microsoft Weather Widget
-✅ **15-minute nowcast** (Microsoft: hourly only)  
-✅ **Always visible on desktop** (Microsoft: hidden in sidebar)  
-✅ **Bilingual support** (Microsoft: system language only)  
-✅ **No telemetry** (Microsoft: tracks usage)  
-✅ **Fully customizable** (Microsoft: limited options)  
-✅ **Open source** (Microsoft: closed)
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-### vs. Rainmeter
-✅ **Simpler to use** (no skin configuration needed)  
-✅ **Lower resource usage** (Python vs Rainmeter engine)  
-✅ **Better precipitation alerts** (smart 4-layer system)  
-✅ **Built-in sleep mode handling** (Rainmeter skins often break)
-
-### vs. Web-based Widgets
-✅ **No browser required** (native desktop app)  
-✅ **Works offline** (shows last cached data)  
-✅ **Lower latency** (direct API calls)  
-✅ **Privacy-focused** (no tracking scripts)
+**Ways to contribute:**
+- 🐛 Report bugs
+- 💡 Suggest features
+- 🔀 Submit Pull Requests
+- 📖 Improve documentation
+- 🌍 Add translations
 
 ---
 
-**Made with ❤️ by [malkosvetnik](https://github.com/malkosvetnik)**
+## 📜 License
 
-*If you find this widget useful, please consider starring ⭐ the repository!*
+This project is licensed under the **MIT License** - see [LICENSE](LICENSE) file for details.
+
+**TL;DR:**
+- ✅ Use freely (personal/commercial)
+- ✅ Modify as needed
+- ✅ Distribute copies
+- ⚠️ Include original license
+- ⚠️ No warranty provided
+
+---
+
+## 🙏 Credits
+
+### Data Providers (Free & Open!)
+- **Weather**: [Open-Meteo](https://open-meteo.com)
+- **Geocoding**: [Nominatim (OpenStreetMap)](https://nominatim.openstreetmap.org/)
+- **IP Location**: [ip-api.com](https://ip-api.com)
+
+### Technologies
+- **Framework**: [PyQt5](https://riverbankcomputing.com/software/pyqt/)
+- **Location**: [geocoder](https://github.com/DenisCarriere/geocoder)
+- **Battery**: [psutil](https://github.com/giampaolo/psutil)
+- **Icons**: Unicode emoji
+
+### Special Thanks
+- Open-Meteo team (free weather API!)
+- PyQt5 contributors
+- Open-source community
+- All users and testers
+
+---
+
+## 📞 Support
+
+### Get Help
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/malkosvetnik/desktop-weather-widget/issues)
+- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/malkosvetnik/desktop-weather-widget/discussions)
+- 📖 **Documentation**: This README
+- 📝 **Changelog**: [CHANGELOG.md](CHANGELOG.md)
+
+### Community
+- ⭐ Star this repo if useful!
+- 🔀 Fork and contribute
+- 💬 Share feedback
+- 📢 Tell others!
+
+---
+
+## 📊 Comparison
+
+### vs. Windows Built-in Weather Widget
+
+| Feature | This Widget | Windows Weather |
+|---------|-------------|-----------------|
+| **Temperature units** | ✅ User choice (C/F) | ⚠️ Auto-detect only |
+| **Time format** | ✅ 12h/24h choice | ⚠️ System default |
+| **Unit system** | ✅ Metric/Imperial | ⚠️ Auto-detect only |
+| **15-min nowcast** | ✅ Yes | ❌ No (hourly only) |
+| **Location choice** | ✅ API or GPS | ⚠️ GPS only |
+| **Bilingual** | ✅ Serbian/English | ❌ No |
+| **Always visible** | ✅ Desktop widget | ❌ Sidebar only |
+| **Customization** | ✅ Extensive | ⚠️ Limited |
+| **Privacy** | ✅ No telemetry | ⚠️ Tracks usage |
+| **Open source** | ✅ Yes | ❌ No |
+| **Offline handling** | ✅ Graceful | ⚠️ Shows errors |
+| **Setup** | ✅ One-time | ✅ None |
+
+---
+
+## 🌟 Why This Widget?
+
+### 1. **Complete Control**
+- Choose YOUR preferred units
+- Select YOUR time format
+- Pick YOUR location method
+- Customize EVERYTHING
+
+### 2. **Privacy-Focused**
+- No telemetry
+- No tracking
+- No data collection
+- Open source (verify yourself!)
+
+### 3. **Bilingual from Day 1**
+- Full Serbian support (Latin)
+- Full English support
+- Easy language switching
+- All features translated
+
+### 4. **Professional UX**
+- Intuitive interface
+- Helpful error messages
+- Persistent settings
+- Graceful degradation
+
+### 5. **Feature-Rich**
+- 15-minute nowcast
+- Dual location system
+- Complete customization
+- Comprehensive data
+
+---
+
+## 📈 Statistics
+
+**Version**: 2.2.0  
+**Release Date**: January 11, 2026  
+**Lines of Code**: ~4,000  
+**Languages**: Serbian, English  
+**Dependencies**: 4 (PyQt5, requests, geocoder, psutil)  
+**Platforms**: Windows 10/11  
+**License**: MIT (free forever!)  
+
+**Development:**
+- 🗓️ Started: December 2025
+- 🔄 Updates: Active
+- 🐛 Bugs: Actively fixed
+- 💡 Features: Continuously added
+
+---
+
+## 🎉 Changelog Highlights
+
+### v2.2.0 (2026-01-11) - Customization Update
+- ✨ Added Celsius/Fahrenheit temperature units
+- ✨ Added 12h/24h time format selection
+- ✨ Added Metric/Imperial unit system
+- ✨ Added battery status for laptops
+- 🐛 Fixed visibility API handling
+- 🐛 Fixed menu translations
+
+### v2.1.7 (2026-01-10) - Windows Location Update
+- ✨ Added Windows Location API (GPS/Wi-Fi)
+- ✨ Added dual location system
+- 🐛 Fixed Cyrillic city names
+- 🐛 Fixed wind direction translation
+
+### v2.1.6 (2026-01-09) - Nowcast Update
+- ✨ Added 15-minute precision nowcast
+- ✨ Improved precipitation alerts
+- 🐛 Fixed time rounding
+
+### v2.1.0 (2026-01-05) - English Translation
+- ✨ Added full English support
+- ✨ Bilingual interface
+- 🐛 Fixed precipitation detection
+
+**Full history**: [CHANGELOG.md](CHANGELOG.md)
+
+---
+
+## 📦 Files in This Repository
+
+```
+desktop-weather-widget/
+├── weather_widget_final.pyw     # Main application (v2.2.0)
+├── requirements.txt              # Python dependencies
+├── cleanup_registry.py           # Settings cleanup utility
+├── README.md                     # This file
+├── CHANGELOG.md                  # Version history
+├── CONTRIBUTING.md               # Contribution guidelines
+├── INSTALLATION.md               # Detailed setup guide
+├── RELEASE_NOTES.md              # Release notes
+├── LICENSE                       # MIT License
+└── screenshots/                  # UI screenshots
+    ├── main_widget_serbian.png
+    ├── main_widget_english.png
+    ├── temperature_menu_celsius.png
+    ├── time_format_menu.png
+    ├── unit_system_menu.png
+    ├── hourly_forecast_tooltip.png
+    ├── air_quality_tooltip.png
+    ├── precipitation_alert.png
+    └── tray_menu.png
+```
+
+---
+
+**Made with ❤️ and ☕ by [malkosvetnik](https://github.com/malkosvetnik)**
+
+*Get accurate, customizable weather for YOUR location - YOUR way!* 🌤️
+
+---
+
+**If you find this useful, please ⭐ star the repository!**
+
+---
+
+*Version 2.2.0 - Released January 11, 2026*
