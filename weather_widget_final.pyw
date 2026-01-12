@@ -2810,64 +2810,127 @@ class WeatherWidget(QMainWindow):
         msg.exec_()
 
     def get_windows_location(self):
-        """Dobij lokaciju iz Windows Location API-ja koristeći geocoder"""
+        """
+        Dobij lokaciju iz Windows Location API-ja koristeći PowerShell
+        NEMA POTREBE ZA DODATNIM BIBLIOTEKAMA - samo native Windows API
+        """
         try:
-            import geocoder
+            import subprocess
+            import json
+            import re
             
-            print("🔍 Pokušavam da dobijem Windows Location (bez IP fallback-a)...")
+            print("🔍 Pokušavam da dobijem Windows Location (PowerShell)...")
             
-            # ✅ POKUŠAJ SAMO Windows Location (bez IP fallback-a)
-            # Ako korisnik izabere Windows Location, želimo PRAVU Windows lokaciju, ne IP
-            try:
-                g = geocoder.windows('me')
+            # PowerShell skripta koja poziva .NET System.Device.Location API
+            ps_script = """
+            Add-Type -AssemblyName System.Device
+            $GeoCoordinateWatcher = New-Object System.Device.Location.GeoCoordinateWatcher
+            $GeoCoordinateWatcher.Start()
+            
+            # Čekaj maksimalno 10 sekundi da Location service odgovori
+            $timeout = 10
+            $elapsed = 0
+            while (($GeoCoordinateWatcher.Status -ne 'Ready') -and ($elapsed -lt $timeout)) {
+                Start-Sleep -Milliseconds 500
+                $elapsed += 0.5
+            }
+            
+            if ($GeoCoordinateWatcher.Status -eq 'Ready') {
+                $coord = $GeoCoordinateWatcher.Position.Location
+                if ($coord.IsUnknown -eq $false) {
+                    # ✅ VAŽNO: Koristi ConvertTo-Json -Compress da izbegneš whitespace probleme
+                    $result = @{
+                        latitude = $coord.Latitude
+                        longitude = $coord.Longitude
+                        accuracy = $coord.HorizontalAccuracy
+                    }
+                    $result | ConvertTo-Json -Compress
+                } else {
+                    Write-Output "ERROR: Location is unknown"
+                }
+            } elseif ($GeoCoordinateWatcher.Status -eq 'Disabled') {
+                Write-Output "ERROR: Location service is disabled"
+            } else {
+                Write-Output "ERROR: Location not available (timeout or no permission)"
+            }
+            
+            $GeoCoordinateWatcher.Stop()
+            """
+            
+            # Pokreni PowerShell skriptu
+            result = subprocess.run(
+                ['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', ps_script],
+                capture_output=True,
+                text=True,
+                timeout=15,
+                creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
+            )
+            
+            if result.returncode == 0:
+                output = result.stdout.strip()
                 
-                if g.ok and g.latlng:
-                    lat = g.latlng[0]
-                    lon = g.latlng[1]
-                    
-                    print(f"✅ Windows Location uspešno: ({lat:.4f}, {lon:.4f})")
-                    
-                    # Dobij naziv grada preko Reverse Geocoding
-                    city_name = self.get_city_from_coords(lat, lon)
-                    
-                    return lat, lon, city_name
-                else:
-                    print(f"❌ Windows Location nije vratio validne koordinate")
-                    print(f"   g.ok = {g.ok}")
-                    print(f"   g.latlng = {g.latlng if hasattr(g, 'latlng') else 'N/A'}")
+                # Proveri da li je greška
+                if output.startswith("ERROR:"):
+                    error_msg = output.replace("ERROR:", "").strip()
+                    print(f"❌ Windows Location greška: {error_msg}")
                     return None, None, None
-                    
-            except AttributeError as e:
-                # geocoder.windows() ne postoji
-                print(f"⚠️ geocoder.windows() metod ne postoji: {e}")
-                print("   Koristim IP geolocation kao alternativu...")
                 
-                # Fallback na IP geolocation (ali prijaviti ćemo korisniku)
-                g = geocoder.ip('me')
+                # ✅ Parsiraj JSON sa regex fallback-om
+                try:
+                    # Prvo pokušaj standard JSON parsing
+                    data = json.loads(output)
+                except json.JSONDecodeError:
+                    # Fallback: Izvuci JSON iz output-a sa regex-om
+                    print("   ⚠️ Standard JSON parsing neuspešan, koristim regex...")
+                    
+                    # Traži JSON objekat u output-u
+                    json_match = re.search(r'\{[^}]+\}', output, re.DOTALL)
+                    if json_match:
+                        json_str = json_match.group(0)
+                        # Ukloni višak whitespace-a
+                        json_str = re.sub(r'\s+', ' ', json_str)
+                        try:
+                            data = json.loads(json_str)
+                        except json.JSONDecodeError:
+                            print(f"❌ Greška pri parsiranju JSON-a (regex fallback)")
+                            print(f"   Output: {output}")
+                            return None, None, None
+                    else:
+                        print(f"❌ Nije pronađen JSON u output-u")
+                        print(f"   Output: {output}")
+                        return None, None, None
                 
-                if g.ok and g.latlng:
-                    lat = g.latlng[0]
-                    lon = g.latlng[1]
-                    
-                    print(f"⚠️ Koristim IP location umesto Windows Location: ({lat:.4f}, {lon:.4f})")
-                    
-                    # Dobij naziv grada preko Reverse Geocoding
-                    city_name = self.get_city_from_coords(lat, lon)
-                    
-                    # Označi da je ovo zapravo IP location, ne Windows Location
-                    return lat, lon, city_name
-                else:
+                # Izvuci koordinate
+                lat = data.get('latitude')
+                lon = data.get('longitude')
+                accuracy = data.get('accuracy', 0)
+                
+                if lat is None or lon is None:
+                    print(f"❌ Nepotpuni podaci u JSON-u: {data}")
                     return None, None, None
-                    
-            except Exception as e:
-                print(f"❌ Windows Location greška: {e}")
+                
+                print(f"✅ Windows Location uspešno: ({lat:.4f}, {lon:.4f})")
+                print(f"   Accuracy: {accuracy:.0f}m")
+                
+                # Dobij naziv grada preko Reverse Geocoding
+                city_name = self.get_city_from_coords(lat, lon)
+                
+                return lat, lon, city_name
+            else:
+                stderr_output = result.stderr.strip()
+                print(f"❌ PowerShell greška (returncode={result.returncode})")
+                if stderr_output:
+                    print(f"   Stderr: {stderr_output}")
                 return None, None, None
                 
-        except ImportError:
-            print("❌ 'geocoder' biblioteka nije instalirana. Instaliraj sa: pip install geocoder")
+        except subprocess.TimeoutExpired:
+            print("❌ Timeout pri dobijanju Windows Location (>15s)")
+            return None, None, None
+        except FileNotFoundError:
+            print("❌ PowerShell nije pronađen na sistemu")
             return None, None, None
         except Exception as e:
-            print(f"❌ Opšta greška u get_windows_location: {e}")
+            print(f"❌ Neočekivana greška u get_windows_location: {e}")
             import traceback
             traceback.print_exc()
             return None, None, None
