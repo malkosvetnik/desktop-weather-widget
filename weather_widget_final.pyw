@@ -2486,10 +2486,11 @@ class WeatherWidget(QMainWindow):
             return f"{pressure_mbar} mbar"
     
     def format_visibility(self, visibility_km):
-        """Format visibility according to unit system - NO conversion needed, API handles it"""
+        """Format visibility with manual conversion (API visibility unit handling is unreliable)"""
         if self.unit_system == 'imperial':
-            # API already returns different values for imperial - just show with mi symbol
-            return f"{visibility_km:.1f} mi"
+            # Manual conversion: km to miles
+            visibility_miles = visibility_km * 0.621371
+            return f"{visibility_miles:.1f} mi"
         else:
             return f"{visibility_km:.1f} km"
     
@@ -3339,11 +3340,11 @@ class WeatherWidget(QMainWindow):
             # Open-Meteo Weather API
             # ✅ v2.1.5: Dodato minutely_15 za "nowcast" preciznost (0-2h)
             # ✅ v2.1.8: Dodato temperature_unit za Celsius/Fahrenheit izbor
-            # ✅ v2.1.9: Dodato wind_speed_unit i precipitation_unit za Metric/Imperial izbor
+            # ✅ v2.2.1: UVEK koristimo kmh za API (visibility consistency), widget konvertuje kasnije
             temp_unit_param = self.get_temp_unit_param()
-            wind_unit_param = self.get_wind_unit_param()
-            precip_unit_param = self.get_precipitation_unit_param()
-            weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover,rain,snowfall&minutely_15=precipitation,precipitation_probability,rain,showers,snowfall&hourly=temperature_2m,weather_code,precipitation_probability,precipitation,rain,showers,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&temperature_unit={temp_unit_param}&wind_speed_unit={wind_unit_param}&precipitation_unit={precip_unit_param}&timezone=auto"
+            # wind_unit_param = self.get_wind_unit_param()  # ← Disabled
+            # precip_unit_param = self.get_precipitation_unit_param()  # ← Disabled
+            weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover,rain,snowfall,visibility&minutely_15=precipitation,precipitation_probability,rain,showers,snowfall&hourly=temperature_2m,weather_code,precipitation_probability,precipitation,rain,showers,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&temperature_unit={temp_unit_param}&wind_speed_unit=kmh&precipitation_unit=mm&timezone=auto"
             
             try:
                 response = self.session.get(weather_url, timeout=15)
@@ -3372,7 +3373,14 @@ class WeatherWidget(QMainWindow):
                 temp = round(current['temperature_2m'], 1)
                 feels = round(current['apparent_temperature'], 1)
                 humidity = current['relative_humidity_2m']
-                wind_speed = round(current['wind_speed_10m'] * 3.6, 1)
+                # ✅ v2.2.1: API uvek vraća m/s, konvertujemo u km/h, pa u mph ako treba
+                wind_speed_ms = current['wind_speed_10m']
+                wind_speed_kmh = round(wind_speed_ms * 3.6, 1)  # m/s → km/h
+                # Convert to mph if imperial
+                if self.unit_system == 'imperial':
+                    wind_speed = round(wind_speed_kmh / 1.609344, 1)  # km/h → mph
+                else:
+                    wind_speed = wind_speed_kmh
                 wind_deg = current.get('wind_direction_10m', 0)
                 wind_direction = self.getWindDirection(wind_deg)
                 pressure = round(current['surface_pressure'])
@@ -3399,7 +3407,8 @@ class WeatherWidget(QMainWindow):
                     # Normalno - koristi weather_code
                     weather_icon, desc = self.getWeatherDescription(weather_code)
                 
-                visibility = data['hourly']['visibility'][0] / 1000 if 'visibility' in data['hourly'] and data['hourly']['visibility'] else 10.0
+                # ✅ v2.2.1: Visibility iz current
+                visibility = current.get('visibility', 10000) / 1000 if 'visibility' in current else 10.0
                 
                 daily = data['daily']
                 sunrise_iso = daily['sunrise'][0]
