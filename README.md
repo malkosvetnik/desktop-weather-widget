@@ -13,7 +13,7 @@ Built for users who want **precise short-term forecasts, reliability, and low sy
 
 ## 📥 Download (Windows EXE)
 
-👉 **[Download Windows EXE (ZIP – ~39 MB)](https://drive.google.com/file/d/1a-xjq2drBX9gmTIofVrEzDJ02tPTAQTX/view?usp=drive_link)**
+👉 **[Download Windows EXE (ZIP – ~39 MB)](https://drive.google.com/file/d/1ZF9424XB2hq78xWPmCAXso5ebOGjOLAm/view?usp=drive_link)**
 
 - ✅ Ready-to-run **`.exe` included**
 - ❌ **No Python installation required**
@@ -23,14 +23,12 @@ Built for users who want **precise short-term forecasts, reliability, and low sy
 
 ---
 
-## ✨ What’s New (v2.2.0)
+## ✨ What’s New (v2.2.2)
 
-- **12-hour (AM/PM) and 24-hour time format**
-- **Celsius / Fahrenheit temperature units**
-- **Optional battery percentage** (laptops only)
-- Improved **15-minute precipitation nowcasting**
-- Better error handling and automatic recovery
-- More robust connection health checks
+- **Critical fix:** Metric / Imperial data consistency
+- Manual, deterministic unit conversions for Imperial mode
+- Correct wind, pressure, and visibility values
+- General stability and reliability improvements
 - Full **Serbian (Latin) / English** interface
 
 ---
