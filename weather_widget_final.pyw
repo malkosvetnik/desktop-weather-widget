@@ -3407,7 +3407,7 @@ class WeatherWidget(QMainWindow):
             temp_unit_param = self.get_temp_unit_param()
             # wind_unit_param = self.get_wind_unit_param()  # ← Disabled
             # precip_unit_param = self.get_precipitation_unit_param()  # ← Disabled
-            weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover,rain,snowfall,visibility&minutely_15=precipitation,precipitation_probability,rain,showers,snowfall&hourly=temperature_2m,weather_code,precipitation_probability,precipitation,rain,showers,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&temperature_unit={temp_unit_param}&wind_speed_unit=kmh&precipitation_unit=mm&timezone=auto"
+            weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover,rain,snowfall,visibility&minutely_15=precipitation,precipitation_probability,rain,showers,snowfall&hourly=temperature_2m,weather_code,precipitation_probability,precipitation,rain,showers,visibility,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&temperature_unit={temp_unit_param}&wind_speed_unit=kmh&precipitation_unit=mm&timezone=auto"
             
             try:
                 response = self.session.get(weather_url, timeout=15)
@@ -3478,9 +3478,50 @@ class WeatherWidget(QMainWindow):
                 sunset_iso = daily['sunset'][0]
                 sunrise_time = datetime.fromisoformat(sunrise_iso)
                 sunset_time = datetime.fromisoformat(sunset_iso)
-                
-                uv_value = round(daily['uv_index_max'][0], 1)
-                
+                # ✅ Realan UV po satu (Open-Meteo hourly uv_index)
+                uv_value = 0.0
+                try:
+                    hourly = data.get('hourly', {})
+                    h_times = hourly.get('time', [])
+                    h_uv = hourly.get('uv_index', [])
+                    # Ciljamo trenutni sat (lokalno vreme jer koristimo timezone=auto)
+                    now_local = datetime.now()
+                    target = now_local.replace(minute=0, second=0, microsecond=0).isoformat(timespec='minutes')
+                    if h_times and h_uv:
+                        try:
+                            idx_uv = h_times.index(target)
+                        except ValueError:
+                            # Fallback: uzmi najbliži termin po apsolutnoj razlici u minutima
+                            idx_uv = None
+                            best = None
+                            for i, t in enumerate(h_times):
+                                try:
+                                    dt = datetime.fromisoformat(t)
+                                except Exception:
+                                    continue
+                                diff = abs((dt - now_local).total_seconds())
+                                if best is None or diff < best:
+                                    best = diff
+                                    idx_uv = i
+                            if idx_uv is None:
+                                idx_uv = 0
+                        if idx_uv < len(h_uv):
+                            uv_value = float(h_uv[idx_uv])
+                        else:
+                            uv_value = 0.0
+                    else:
+                        uv_value = 0.0
+                except Exception:
+                    # Fallback na dnevni max (i noću 0) ako hourly UV nije dostupan
+                    sunrise_iso = daily['sunrise'][0]
+                    sunset_iso = daily['sunset'][0]
+                    sunrise_time = datetime.fromisoformat(sunrise_iso)
+                    sunset_time = datetime.fromisoformat(sunset_iso)
+                    now = datetime.now(sunrise_time.tzinfo)
+                    if now < sunrise_time or now > sunset_time:
+                        uv_value = 0.0
+                    else:
+                        uv_value = round(daily['uv_index_max'][0], 1)
                 self.current_temp = f"{int(temp)}°"
                 self.city_label.setText(self.normalizeCityName(city_name))
                 temp_symbol = self.get_temp_symbol()
