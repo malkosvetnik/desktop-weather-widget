@@ -3588,6 +3588,53 @@ class WeatherWidget(QMainWindow):
             print(f"❌ Greška: {e}")
 
     
+    def getDayRepresentativeWeatherCode(self, weather_data, date_str, fallback_code=None):
+        """
+        ✅ Open-Meteo daily.weather_code je 'worst case' za ceo dan (npr. magla u 5h
+        ujutru pobedi 12h sunca posle). Zato ovde sami računamo reprezentativni kod
+        iz hourly podataka: gledamo SAMO dnevne sate (is_day == 1) za taj datum i
+        uzimamo NAJČEŠĆI (mode) weather_code, umesto najgoreg.
+        Fallback na daily kod ako hourly podaci nisu dostupni za taj dan.
+        """
+        try:
+            hourly = weather_data.get('hourly', {})
+            times = hourly.get('time', [])
+            codes = hourly.get('weather_code', [])
+            is_day_arr = hourly.get('is_day', [])
+
+            if not times or not codes:
+                return fallback_code
+
+            # ✅ Prvo probaj samo dnevne sate (is_day == 1) za dati datum
+            day_codes = []
+            for i, t in enumerate(times):
+                if not t.startswith(date_str):
+                    continue
+                if i >= len(codes) or codes[i] is None:
+                    continue
+                if is_day_arr and i < len(is_day_arr) and is_day_arr[i] == 0:
+                    continue  # noćni sat - preskoči
+                day_codes.append(codes[i])
+
+            # ✅ Ako nema dnevnih satova (npr. nema is_day podatka), uzmi SVE sate tog dana
+            if not day_codes:
+                day_codes = [codes[i] for i, t in enumerate(times)
+                             if t.startswith(date_str) and i < len(codes) and codes[i] is not None]
+
+            if not day_codes:
+                return fallback_code
+
+            # ✅ Najčešći kod (mode); na remi prednost manjem (blažem) kodu
+            counts = {}
+            for c in day_codes:
+                counts[c] = counts.get(c, 0) + 1
+            best_code = min(counts.items(), key=lambda kv: (-kv[1], kv[0]))[0]
+            return best_code
+
+        except Exception as e:
+            print(f"❌ Greška pri računanju reprezentativnog koda za {date_str}: {e}")
+            return fallback_code
+
     def update5DayForecast(self, weather_data, location_data):
         """Ažuriraj 5-dnevnu prognozu iz Open-Meteo podataka"""
         try:
@@ -3597,8 +3644,13 @@ class WeatherWidget(QMainWindow):
                 date_str = daily['time'][i]
                 temp_max = round(daily['temperature_2m_max'][i], 1)
                 temp_min = round(daily['temperature_2m_min'][i], 1)
-                weather_code = daily['weather_code'][i]
-                
+                daily_worst_case_code = daily['weather_code'][i]
+
+                # ✅ Koristi mod dnevnih hourly kodova umesto 'worst case' daily koda
+                weather_code = self.getDayRepresentativeWeatherCode(
+                    weather_data, date_str, fallback_code=daily_worst_case_code
+                )
+
                 weather_icon, desc = self.getWeatherDescription(weather_code)
                 
                 date_obj = datetime.fromisoformat(date_str)
